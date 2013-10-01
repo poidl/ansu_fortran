@@ -193,30 +193,33 @@ contains
         real(rk),  dimension(:,:), intent(in) :: pns
         logical,  dimension(size(pns,1),size(pns,2)) :: wet
         logical,  dimension(size(pns,1)*size(pns,2)) :: bool, wet_
-        integer,  dimension(size(pns,1),size(pns,2)) :: L
         integer,  dimension(size(pns,1)*size(pns,2)) :: L_
-        integer :: k, i, ii, iregion,kk,kkk, xn,yn
-        integer, allocatable, dimension(:) :: idx, idx_new
-
+        integer, dimension(size(pns,2)) :: east, west
+        integer :: k, i, j, ii, iregion,kk,kkk, xn,yn
+        integer, allocatable, dimension(:) :: idx, neighbours, neighbours_tmp
         type(cell), dimension(:), pointer, intent(out) :: regions
+        logical :: zonally_periodic
 
+        namelist /user_input/ zonally_periodic
 
-!        do kk=1,3
-!            do kkk=1,4
-!                write(*,*) 'p: ',pns(kkk,kk)
-!            enddo
-!        enddo
+        open(1,file='user_input.nml')
+        read(1,user_input)
+        close(1)
+
         xn=size(pns,1)
         yn=size(pns,2)
 
         wet=.not.(isnan(pns))
         wet_=pack(wet,.true.)
 
-        L=0 ! label matrix
+        L_=0 ! label matrix
         iregion=1 ! region label
-        allocate(idx(1))
 
         do while (.true.)
+            if (allocated(idx)) then
+                deallocate(idx)
+            endif
+            allocate(idx(1))
             ! find index of first wet point
             do i = 1, size(wet_)
                 if (wet_(i)) then
@@ -224,40 +227,158 @@ contains
                     exit
                 endif
             end do
-            if (i==size(wet_)) then
+
+            if (i==size(wet_)+1) then
                 exit
             endif
 
             idx(1)=ii ! linear indices of the pixels that were just labeled
-            wet_(idx(1))=0 ! set the pixel to 0
+            wet_(idx(1))=.false. ! set the pixel to 0
             L_(idx(1)) = iregion ! label first point
 
             do while (size(idx)/=0) ! find neighbours
-                if (allocated(idx_new)) then
-                    deallocate(idx_new)
+                if (allocated(neighbours)) then
+                    deallocate(neighbours)
                 endif
-                allocate(idx_new(size(idx)*4)) ! each point has 4 neighbours
-                idx_new(1:size(idx))=idx+1
-                idx_new(1*size(idx)+1:2*size(idx))=idx-1
-                idx_new(2*size(idx)+1:3*size(idx))=idx+xn
-                idx_new(3*size(idx)+1:4*size(idx))=idx-xn
+                allocate(neighbours(size(idx)*4)) ! each point has 4 neighbours
+                neighbours(1:size(idx))=idx+1
+                neighbours(1*size(idx)+1:2*size(idx))=idx-1
+                neighbours(2*size(idx)+1:3*size(idx))=idx+xn
+                neighbours(3*size(idx)+1:4*size(idx))=idx-xn
 
+                ! zonal boundaries
+                east= (/(i, i=0   , (yn-1)*xn, xn)/) ! eastern neighbours of eastern bdy
+                west= (/(i, i=xn+1, yn*xn+1  , xn)/) ! western neighbours of western bdy
+                allocate(neighbours_tmp(size(idx)))
+                if (zonally_periodic) then
+                    do i=1,yn
+                        where (neighbours(1*size(idx)+1:2*size(idx)) == east(yn-i+1))
+                            neighbours(1*size(idx)+1:2*size(idx))=neighbours(1*size(idx)+1:2*size(idx))+xn
+                        end where
+                        where (neighbours(1:size(idx)) == west(i))
+                            neighbours(1:size(idx))=neighbours(1:size(idx))-xn
+                        end where
+                    enddo
+                else
+                    do i=1,yn
+                        where (neighbours(1*size(idx)+1:2*size(idx)) == east(i))
+                            neighbours(1*size(idx)+1:2*size(idx))=-2*xn
+                        end where
+                        where (neighbours(1:size(idx)) == west(i))
+                            neighbours(1:size(idx))=-2*xn
+                        end where
+                    enddo
+                endif
+                deallocate(neighbours_tmp)
+
+                ! meridional boundaries
+                where (neighbours<1)
+                    neighbours=-2*xn ! flagging as invalid
+                end where
+                where (neighbours>xn*yn)
+                    neighbours=-2*xn
+                end where
+
+                allocate(neighbours_tmp(count(.not.(neighbours==-2*xn))))
+                j=1
+                do i=1,size(neighbours)
+                    if (neighbours(i)/=-2*xn) then
+                        neighbours_tmp(j)=neighbours(i)
+                        j=j+1
+                    endif
+                enddo
+                deallocate(neighbours)
+                allocate(neighbours(size(neighbours_tmp)))
+                neighbours=neighbours_tmp
+                deallocate(neighbours_tmp)
+
+                ! Remove duplicate entries. This is copied from
+                ! http://rosettacode.org/wiki/Remove_duplicate_elements#Fortran
+                if (allocated(neighbours_tmp)) then
+                    deallocate(neighbours_tmp)
+                endif
+                allocate(neighbours_tmp(size(neighbours)))
+
+                if (size(neighbours)>0) then
+                    neighbours_tmp(1) = neighbours(1)
+
+                    k = 1
+                    outer: do i=2,size(neighbours)
+                        do j=1,k
+                            if (neighbours_tmp(j) == neighbours(i)) then
+                              ! Found a match so start looking again
+                                cycle outer
+                            end if
+                        end do
+                        ! No match found so add it to the output
+                        k = k + 1
+                        neighbours_tmp(k) = neighbours(i)
+                    end do outer
+                    deallocate(neighbours)
+                    allocate(neighbours(k))
+                    neighbours=neighbours_tmp(1:k)
+                endif
+                ! end remove duplicate entries
+
+                ! keep only wet neighbours
+                do i=1,size(neighbours)
+                    if (.not.(wet_(neighbours(i)))) then
+                        neighbours(i)=-2*xn ! flagging as invalid
+                    endif
+                enddo
+
+                if (allocated(neighbours_tmp)) then
+                    deallocate(neighbours_tmp)
+                endif
+                allocate(neighbours_tmp(count(.not.(neighbours==-2*xn))))
+                    j=1
+                    do i=1,size(neighbours)
+                        if (neighbours(i)/=-2*xn) then
+                            neighbours_tmp(j)=neighbours(i)
+                            j=j+1
+                        endif
+                    enddo
+                deallocate(neighbours)
+                allocate(neighbours(size(neighbours_tmp)))
+                neighbours=neighbours_tmp
+                deallocate(neighbours_tmp)
+                deallocate(idx)
+                allocate(idx(size(neighbours)))
+                idx=neighbours
+                deallocate(neighbours)
+
+                ! done?
+                if (size(idx)==0) then
+                    exit
+                endif
+
+                do i=1,size(idx)
+                    L_(idx(i))=iregion
+                    wet_(idx(i))=.false. ! set the pixels that were just labeled to 0
+                enddo
             enddo
 
             iregion=iregion+1
         enddo
 
 
-        allocate(regions(iregion))
-        L_=pack(L,.true.)
-        do k=1,iregion
+        allocate(regions(iregion-1))
+        bool=.false.
+
+        do k=1,iregion-1
+            j=1
+            bool=.false.
             where (L_==k)
                 bool=.true.
             end where
             allocate(regions(k)%points(1:count(bool)))
+            do i=1,size(L_)
+                if (L_(i)==k) then
+                    regions(k)%points(j)=i
+                    j=j+1
+                endif
+            enddo
         enddo
-
-
     end subroutine find_regions
 
 

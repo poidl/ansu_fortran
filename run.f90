@@ -17,13 +17,13 @@ program run
     real(rk), dimension(NX,NY,NZ) :: s, ct, p
     real(rk) :: zero, nan
     real(rk), dimension(3,4) :: test
-
+    integer :: i
     type(cell), dimension(:), pointer :: regions
 
 
     call ncread(sns,ctns,pns,s,ct,p,e1t,e2t)
     !call ncread_debug(ctns)
-    write(*,'(A, F20.16)') 'hoit: ', sns(90,43)
+!    write(*,'(A, F20.16)') 'hoit: ', sns(90,43)
 !    call ncwrite_debug(pack(ctns,.true.),'ctns.nc','ctns',2)
     call mld(s,ct,p,cut_off_choice)
     call epsilon_(sns,ctns,pns,e1t,e2t,ex,ey)
@@ -37,13 +37,22 @@ program run
 
 
 
-    test=reshape( (/1.0d0, 1.0d0, nan, nan, nan, nan, nan, nan, nan,nan,nan,nan/), shape = (/3,4/))
-    call find_regions(test,regions);
+    !test=reshape( (/1.0d0, 1.0d0, nan, nan, nan, nan, nan, nan, nan,nan,nan,nan/), shape = (/3,4/))
+    !test=reshape( (/1.0d0, 1.0d0, nan, nan, nan, nan, 1.0d0,1.0d0, nan,nan,1.0d0,1.0d0/), shape = (/3,4/))
+    !test=reshape( (/1.0d0, nan, 1.0d0, nan, nan, nan, nan, nan, nan, 1.0d0, nan, 1.0d0/), shape = (/3,4/))
+    !test=reshape( (/1.0d0, nan, 1.0d0, nan, nan, nan, nan, nan, nan, 1.0d0, nan, 1.0d0/), shape = (/3,4/))
+    !call find_regions(test,regions);
 
-    write(*,*) 'size(regions): ', size(regions(1)%points)
-    write(*,*) 'regions(5)%points(4): ',  regions(5)%points(4)
-    write(*,'(A, F20.16)') 'hoit: ', sns(50,6)
-    write(*,'(A, F20.16)') 'hoi: ', s(50,6,1)
+    call find_regions(pns,regions);
+
+!    write(*,*) 'size(regions): ', size(regions)
+!    do i=1,size(regions)
+!        write(*,*) 'size(regions(',i,'): ',size(regions(i)%points)
+!    enddo
+
+    !write(*,*) 'size(regions): ', size(regions(1)%points)
+    !write(*,*) 'regions(5)%points(4): ',  regions(5)%points(4)
+    !write(*,'(A, F20.16)') 'hoit: ', sns(50,6)
 
 end program run
 
