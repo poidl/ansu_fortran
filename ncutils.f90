@@ -70,13 +70,13 @@ contains
     end subroutine ncwrite
 
 
-    subroutine ncread(sns,ctns,pns,s,ct,p,e1t,e2t)
+    subroutine ncread(sns,ctns,pns,s,ct,p)
 
         integer, parameter :: rk = selected_real_kind(14,30)
 
-        character (len = *), parameter :: FILE_NAME = "/home/z3439823/mymatlab/omega/ansu_utils/exp100/data/os_input.nc"
+        character (len = *), parameter :: FILE_NAME = "/home/z3439823/mymatlab/omega/ansu_utils/exp206/data/os_input.nc"
 
-        real(rk), dimension(:,:), intent(inout) :: sns, ctns, pns, e1t, e2t
+        real(rk), dimension(:,:), intent(inout) :: sns, ctns, pns
         real(rk), dimension(:,:,:), intent(inout) :: s, ct, p
         integer :: ncid, varid
 
@@ -96,11 +96,6 @@ contains
         call check( nf90_get_var(ncid, varid, ct) )
         call check( nf90_inq_varid(ncid, "p", varid) )
         call check( nf90_get_var(ncid, varid, p) )
-
-        call check( nf90_inq_varid(ncid, "e1t", varid) )
-        call check( nf90_get_var(ncid, varid, e1t) )
-        call check( nf90_inq_varid(ncid, "e2t", varid) )
-        call check( nf90_get_var(ncid, varid, e2t) )
 
         ! Close
         call check( nf90_close(ncid) )
