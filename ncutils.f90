@@ -6,6 +6,7 @@
 !Translated to Fortran by S. Riha (2013)
 
 module ncutils_mod
+    use stuff_mod
     use netcdf
     implicit none
     public ncwrite
@@ -15,7 +16,6 @@ module ncutils_mod
 contains
 
     subroutine ncwrite(va,fname,vname,mode)
-        integer, parameter :: rk = selected_real_kind(14,30)
         real(rk), dimension(:), intent(in) :: va
         character (len = *), intent(in) :: fname
         character (len = *), intent(in) :: vname
@@ -41,8 +41,8 @@ contains
 
         else if (mode==2) then
 
-            call check( nf90_def_dim(ncid,"y",43,y_dimid))
-            call check( nf90_def_dim(ncid,"x",90,x_dimid))
+            call check( nf90_def_dim(ncid,"y",NY,y_dimid))
+            call check( nf90_def_dim(ncid,"x",NX,x_dimid))
             dimids2 =  [x_dimid, y_dimid]
             call check( nf90_def_var(ncid,vname,NF90_DOUBLE,dimids2,varid))
             zero=0.0d0
@@ -50,18 +50,18 @@ contains
             call check( nf90_put_att(ncid, varid, "_FillValue", fillval) )
             call check( nf90_enddef(ncid) )
 
-            call check( nf90_put_var(ncid,varid,reshape(va,[90,43])))
+            call check( nf90_put_var(ncid,varid,reshape(va,[90,NY])))
 
         else if (mode==3) then
 
             call check( nf90_def_dim(ncid,"z",101,z_dimid))
-            call check( nf90_def_dim(ncid,"y",43,y_dimid))
-            call check( nf90_def_dim(ncid,"x",90,x_dimid))
+            call check( nf90_def_dim(ncid,"y",NY,y_dimid))
+            call check( nf90_def_dim(ncid,"x",NX,x_dimid))
             dimids3 =  [x_dimid, y_dimid, z_dimid]
             call check( nf90_def_var(ncid,vname,NF90_DOUBLE,dimids3,varid))
             call check( nf90_close(ncid) )
             call check( nf90_open(fname, NF90_WRITE, ncid) )
-            call check( nf90_put_var(ncid,varid,reshape(va,[90,43,101])))
+            call check( nf90_put_var(ncid,varid,reshape(va,[90,NY,101])))
 
         endif
 
@@ -71,8 +71,6 @@ contains
 
 
     subroutine ncread(sns,ctns,pns,s,ct,p)
-
-        integer, parameter :: rk = selected_real_kind(14,30)
 
         character (len = *), parameter :: FILE_NAME = "/home/z3439823/mymatlab/omega/ansu_utils/exp206/data/os_input.nc"
 

@@ -12,6 +12,7 @@ program run
 
     real(rk), dimension(NX,NY) :: sns, ctns, pns, cut_off_choice
     real(rk), dimension(NX,NY) :: e1t, e2t, ex, ey, drho
+    real(rk), dimension(NX*NY) :: x
     real(rk), dimension(NX,NY,NZ) :: s, ct, p
     real(rk) :: nan
     real(rk), dimension(3,4) :: test
@@ -31,6 +32,7 @@ program run
     call delta_tilde_rho(sns,ctns,pns)
     call ncwrite(pack(drhox,.true.),'drhox.nc','drhox',2)
     call ncwrite(pack(drhoy,.true.),'drhoy.nc','drhoy',2)
+
 !    call ncwrite(pack(ey,.true.),'ey.nc','ey',2)
 
 !    ex=merge(nan,ex,pns<=cut_off_choice)
@@ -50,7 +52,7 @@ program run
     regions_test(1)%points=regions(1)%points
 
 
-    !call solve_lsqr(regions, drhox, drhoy, drho)
+    call solve_lsqr(drho)
 
     write(*,*) 'size(regions_test): ', size(regions_test)
     do i=1,size(regions_test)

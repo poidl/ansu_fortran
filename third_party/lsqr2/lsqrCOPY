@@ -1,0 +1,5 @@
+# Copy lsqrf90-v2.zip into the SOL repository
+#
+# 17 Sep 2007: First version
+
+cp -p lsqrf90-v2.zip ~/sol/software/lsqr/f90/

@@ -6,6 +6,8 @@
 !Translated to Fortran by S. Riha (2013)
 
 module ans_mod
+    use stuff_mod
+    use lsqrModule, only : LSQR
     use ncutils_mod
     implicit none
     public mld
@@ -14,12 +16,7 @@ module ans_mod
         real, dimension(:), pointer :: points
     end type cell
 
-
-    integer, parameter, public :: rk = selected_real_kind(14,30)
-
-
     type(cell), dimension(:), pointer, public :: regions
-    integer, parameter, public :: NX = 90, NY = 43, NZ=101
 
     real(rk),  dimension(NX,NY), public :: drhox, drhoy
     real(rk),  allocatable, dimension(:) :: y
@@ -43,7 +40,22 @@ module ans_mod
             real (rk)  :: gsw_beta
             real (rk) :: sa, ct, p
         end function gsw_beta
+!
+!        subroutine LSQR  ( m, n, Aprod1, Aprod2, b, damp, wantse,         &
+!                     x, se,                                         &
+!                     atol, btol, conlim, itnlim, nout,              &
+!                     istop, itn, Anorm, Acond, rnorm, Arnorm, xnorm )
+!            integer, parameter :: rk = selected_real_kind(14,30)
+!            integer,  intent(in)  :: m, n, itnlim, nout
+!            integer,  intent(out) :: istop, itn
+!            logical,  intent(in)  :: wantse
+!            real(rk), intent(in)  :: b(m)
+!            real(rk), intent(out) :: x(n), se(*)
+!            real(rk), intent(in)  :: atol, btol, conlim, damp
+!            real(rk), intent(out) :: Anorm, Acond, rnorm, Arnorm, xnorm
+!        end subroutine LSQR
     end interface
+
 
 
 contains
@@ -260,6 +272,9 @@ contains
             en(nx:ny*nx:nx)=.false.
         endif
 
+        nn=reg.and.cshift(reg,nx)
+        nn(nx*(ny-1)+1:ny*nx:nx)=.false.
+
         sreg(1)=reg(1) ! cumulative sum
         do i=2,size(reg)
             j=reg(i)
@@ -270,6 +285,7 @@ contains
         allocate(j1_ew(sum(en)))
         allocate(j2_ew(sum(en)))
         allocate(y(sum(en)+sum(nn)+1)) ! A*x=y
+
         j=1
         do i=1,size(en)
             if (en(i)==1) then
@@ -314,16 +330,30 @@ contains
     end subroutine get_j
 
 
-    subroutine solve_lsqr( drho)
-        real(rk),  dimension(:,:), intent(out) :: drho
-        real(rk),  allocatable, dimension(:,:) :: y
+    subroutine solve_lsqr(drho)
+        real(rk),  dimension(NX,NY), intent(out) :: drho
+        real(rk),  dimension(NX*NY) :: drho_
         integer, allocatable, dimension(:) :: j1, j2
-        real(rk), allocatable, dimension(:) :: x
+        real(rk), allocatable, dimension(:) :: x,b
         integer :: setnan, i, j
         real(rk) :: nan
         logical :: zonally_periodic
-
         namelist /user_input/ zonally_periodic
+
+        ! begin LSQR arguments, as described in lsqrModule.f90
+        integer :: m, n
+        real(rk) :: damp=0.0d0 ! damping parameter
+        logical :: wantse=.false. ! standard error estimates
+        real(rk), dimension(1) :: se=(/0.0d0/)
+        real(rk) :: atol=0.0d0
+        real(rk) :: btol=0.0d0
+        real(rk) :: conlim=0.0d0
+        integer :: itnlim=50000 ! max. number of iterations
+        integer :: nout=-99 ! output file
+        integer :: istop=-99 ! reason for termination
+        integer :: itn=-99 ! number of iterations performed
+        real(rk) :: Anorm, Acond, rnorm, Arnorm, xnorm
+        ! end LSQR arguments
 
         open(1,file='user_input.nml')
         read(1,user_input)
@@ -335,17 +365,28 @@ contains
         call get_j()
 
         allocate(x(size(regions(1)%points)))
+        x=0.0d0
+        b=y
+        m=size(y)
+        n=size(x)
 
-        call Aprod1(size(y),size(regions(1)%points), x,y)
+!        call Aprod1(size(y),size(regions(1)%points), x,y)
+!        call Aprod2(size(y),size(regions(1)%points), x,y)
 
-!        allocate(y(size(drhox)+size(drhoy)+1))
-!
-!        call get_j
-!        call Aprod1(size(j1)+1,size(regions(1)%points),drho,y)
-!        LSQR  ( m, n, Aprod1, Aprod2, b, damp, wantse,         &
-!                     x, se,                                         &
-!                     atol, btol, conlim, itnlim, nout,              &
-!                     istop, itn, Anorm, Acond, rnorm, Arnorm, xnorm )
+
+        call LSQR  ( m, n, Aprod1, Aprod2, b, damp, wantse,         &
+                     x, se,                                         &
+                     atol, btol, conlim, itnlim, nout,              &
+                     istop, itn, Anorm, Acond, rnorm, Arnorm, xnorm )
+
+
+!        call ncwrite(pack(x,.true.),'x.nc','x',2)
+        drho_=nan
+        do i=1,size(regions(1)%points)
+            drho_(regions(1)%points(i))= x(i)
+        enddo
+        drho=reshape( drho_,(/NX,NY/) )
+        !call ncwrite(pack(drho,.true.),'drho.nc','drho',2)
 
     end subroutine solve_lsqr
 
