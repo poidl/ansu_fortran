@@ -267,20 +267,28 @@ contains
             reg(region(i))=.true.
         enddo
 
-        en=reg.and.cshift(reg,1)
+        en=reg.and.cshift(reg,1) ! en is true at a point if its eastward neighbor is in the region
+        do i=nx,nx*ny,nx ! correct western boundary
+            en(i)=reg(i).and.reg(i-nx+1)
+        enddo
+
         if (.not.zonally_periodic) then
             en(nx:ny*nx:nx)=.false.
         endif
 
         nn=reg.and.cshift(reg,nx)
-        nn(nx*(ny-1)+1:ny*nx:nx)=.false.
+        nn(nx*(ny-1)+1:ny*nx)=.false.
 
         sreg(1)=reg(1) ! cumulative sum
+        ! sparse indices of points forming the region (points of non-region are indexed with dummy)
         do i=2,size(reg)
             j=reg(i)
             sreg(i)=sreg(i-1)+j
         enddo
-        sreg_en=cshift(sreg,1)
+        sreg_en=cshift(sreg,1) ! sparse indices of eastward neighbours
+        do i=nx,nx*ny,nx ! correct western boundary
+            sreg_en(i)=sreg_en(i-nx+1)
+        enddo
 
         allocate(j1_ew(sum(en)))
         allocate(j2_ew(sum(en)))
@@ -295,11 +303,6 @@ contains
                 j=j+1
             endif
         enddo
-
-
-        ! north-south
-        nn=reg.and.cshift(reg,nx)
-        nn(nx*(ny-1)+1:ny*nx:nx)=.false.
 
         sreg_nn=cshift(sreg,nx)
 
@@ -325,7 +328,7 @@ contains
         j2(size(j2_ew)+1: size(j2_ew)+size(j2_ns))=j2_ns
 
         !condition
-        y(size(y))=0
+        y(size(y))=0.0d0
 
     end subroutine get_j
 
@@ -345,8 +348,8 @@ contains
         real(rk) :: damp=0.0d0 ! damping parameter
         logical :: wantse=.false. ! standard error estimates
         real(rk), dimension(1) :: se=(/0.0d0/)
-        real(rk) :: atol=0.0d0
-        real(rk) :: btol=0.0d0
+        real(rk) :: atol=1.0d-7
+        real(rk) :: btol=1.0d-7
         real(rk) :: conlim=0.0d0
         integer :: itnlim=50000 ! max. number of iterations
         integer :: nout=-99 ! output file
@@ -365,21 +368,36 @@ contains
         call get_j()
 
         allocate(x(size(regions(1)%points)))
+        allocate(b(size(y)))
         x=0.0d0
         b=y
         m=size(y)
         n=size(x)
 
+!        write(*,*) 'b: ***************'
+!        do i=1,size(b)
+!            write(*,*) b(i)
+!        enddo
+!        write(*,*) 'x: ***************'
+!        do i=1,size(x)
+!            write(*,*) x(i)
+!        enddo
+
 !        call Aprod1(size(y),size(regions(1)%points), x,y)
 !        call Aprod2(size(y),size(regions(1)%points), x,y)
 
-
+        write(*,*) 'calling LSQR...'
         call LSQR  ( m, n, Aprod1, Aprod2, b, damp, wantse,         &
                      x, se,                                         &
                      atol, btol, conlim, itnlim, nout,              &
                      istop, itn, Anorm, Acond, rnorm, Arnorm, xnorm )
+        write(*,*) 'istop: ',istop
+        write(*,*) 'rnorm: ',rnorm
 
-
+!        write(*,*) 'x: ***************'
+!        do i=1,size(x)
+!            write(*,*) x(i)
+!        enddo
 !        call ncwrite(pack(x,.true.),'x.nc','x',2)
         drho_=nan
         do i=1,size(regions(1)%points)
@@ -399,15 +417,24 @@ contains
         do i=1,m-1
             y(i)=y(i)+x(j1(i))-x(j2(i))
         enddo
+        ! condition
+        y(m)=y(m)+sum(x)
+
     end subroutine Aprod1
 
     subroutine Aprod2(m,n,x,y)
         integer,  intent(in)    :: m,n
         real(rk), intent(inout)    :: x(n)
         real(rk), intent(in) :: y(m)
-        integer, allocatable, dimension(:) :: j1, j2
         integer :: j
-        real(rk), dimension(size(y)) :: tmp
+        real(rk), dimension(m) :: tmp
+
+        do j=1,n
+            tmp=0
+            where (j1==j)
+                tmp=y
+            end where
+        enddo
 
         do j=1,n
             tmp=0
@@ -421,6 +448,11 @@ contains
             end where
                 x(j)=x(j)-sum(tmp)
                 tmp=0
+        enddo
+
+        ! condition
+        do j=1,size(x)
+            x(j)=x(j)+y(m)
         enddo
     end subroutine Aprod2
 

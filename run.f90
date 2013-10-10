@@ -27,6 +27,7 @@ program run
 !    write(*,'(A, F20.16)') 'hoit: ', sns(90,43)
 !    call ncwrite_debug(pack(ctns,.true.),'ctns.nc','ctns',2)
     call mld(s,ct,p,cut_off_choice)
+
     call ncwrite(pack(cut_off_choice,.true.),'cut_off_choice.nc','cutoff',2)
 
     call delta_tilde_rho(sns,ctns,pns)
@@ -53,7 +54,7 @@ program run
 
 
     call solve_lsqr(drho)
-
+    call ncwrite(pack(drho,.true.),'drho.nc','drho',2)
     write(*,*) 'size(regions_test): ', size(regions_test)
     do i=1,size(regions_test)
         write(*,*) 'size(regions_test(',i,'): ',size(regions_test(i)%points)

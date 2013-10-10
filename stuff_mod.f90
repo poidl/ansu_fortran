@@ -7,5 +7,6 @@
 
 module stuff_mod
     integer, parameter, public :: rk = selected_real_kind(14,30)
+    !integer, parameter, public :: NX = 2, NY = 2, NZ=101
     integer, parameter, public :: NX = 90, NY = 43, NZ=101
 end module stuff_mod
