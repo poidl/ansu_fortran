@@ -348,10 +348,11 @@ contains
         real(rk) :: damp=0.0d0 ! damping parameter
         logical :: wantse=.false. ! standard error estimates
         real(rk), dimension(1) :: se=(/0.0d0/)
-        real(rk) :: atol=1.0d-7
-        real(rk) :: btol=1.0d-7
+        real(rk) :: atol=0.0d0
+        real(rk) :: btol=0.0d0
         real(rk) :: conlim=0.0d0
-        integer :: itnlim=50000 ! max. number of iterations
+        !integer :: itnlim=450 ! max. number of iterations
+        integer :: itnlim=450 ! max. number of iterations
         integer :: nout=-99 ! output file
         integer :: istop=-99 ! reason for termination
         integer :: itn=-99 ! number of iterations performed
@@ -393,7 +394,7 @@ contains
                      istop, itn, Anorm, Acond, rnorm, Arnorm, xnorm )
         write(*,*) 'istop: ',istop
         write(*,*) 'rnorm: ',rnorm
-
+        write(*,*) 'Arnorm/(Anorm*rnorm): ', Arnorm/(Anorm*rnorm)
 !        write(*,*) 'x: ***************'
 !        do i=1,size(x)
 !            write(*,*) x(i)
