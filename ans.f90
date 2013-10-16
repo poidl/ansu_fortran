@@ -330,6 +330,12 @@ contains
         !condition
         y(size(y))=0.0d0
 
+!        do i=1,size(j1)
+!            write(*,*) j1(i)
+!        enddo
+        write(*,*) 'sizej1 ', size(j1)
+        write(*,*) 'sizej2 ', size(j2)
+        write(*,*) 'size(y) ',size(y)
     end subroutine get_j
 
 
@@ -427,32 +433,16 @@ contains
         integer,  intent(in)    :: m,n
         real(rk), intent(inout)    :: x(n)
         real(rk), intent(in) :: y(m)
-        integer :: j
+        integer :: i,j
         real(rk), dimension(m) :: tmp
 
-        do j=1,n
-            tmp=0
-            where (j1==j)
-                tmp=y
-            end where
-        enddo
-
-        do j=1,n
-            tmp=0
-            where (j1==j)
-                tmp=y
-            end where
-                x(j)=x(j)+sum(tmp)
-                tmp=0
-            where (j2==j)
-                tmp=y
-            end where
-                x(j)=x(j)-sum(tmp)
-                tmp=0
+        do i=1,m-1
+            x(j1(i))=x(j1(i))+y(i)
+            x(j2(i))=x(j2(i))-y(i)
         enddo
 
         ! condition
-        do j=1,size(x)
+        do j=1,n
             x(j)=x(j)+y(m)
         enddo
     end subroutine Aprod2
