@@ -23,6 +23,7 @@ program run
     nan=0d0/setnan
 
     call ncread(sns,ctns,pns,s,ct,p)
+
     !call ncread_debug(ctns)
 !    write(*,'(A, F20.16)') 'hoit: ', sns(90,43)
 !    call ncwrite_debug(pack(ctns,.true.),'ctns.nc','ctns',2)
@@ -52,16 +53,17 @@ program run
     allocate(regions_test(1)%points(size(regions(1)%points)))
     regions_test(1)%points=regions(1)%points
 
-
     call solve_lsqr(drho)
     call ncwrite(pack(drho,.true.),'drho.nc','drho',2)
     write(*,*) 'size(regions_test): ', size(regions_test)
-    do i=1,size(regions_test)
-        write(*,*) 'size(regions_test(',i,'): ',size(regions_test(i)%points)
+    do i=1,size(regions)
+        write(*,*) 'size(regions(',i,'): ',size(regions(i)%points)
     enddo
 
     !write(*,*) 'size(regions): ', size(regions(1)%points)
-    !write(*,*) 'regions(5)%points(4): ',  regions(5)%points(4)
+    do i=1,size(regions(1)%points)
+        write(*,*) 'regions(1)%point(', i, '): ',  regions(1)%points(i)
+    enddo
     write(*,'(A, F20.16)') 'hoit: ', sns(50,6)
 
 end program run

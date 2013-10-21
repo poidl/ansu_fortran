@@ -30,13 +30,11 @@ contains
         call check( nf90_create(fname,ior(nf90_netcdf4, nf90_classic_model),ncid))
 
         if (mode==1) then
-
             call check( nf90_def_dim(ncid,"x",size(va),x_dimid))
             dimids1 =  (/ x_dimid /)
             call check( nf90_def_var(ncid,vname,NF90_DOUBLE,dimids1,varid))
-            call check( nf90_close(ncid) )
+            call check( nf90_enddef(ncid) )
 
-            call check( nf90_open(fname, NF90_WRITE, ncid) )
             call check( nf90_put_var(ncid,varid,va))
 
         else if (mode==2) then
@@ -47,7 +45,7 @@ contains
             call check( nf90_def_var(ncid,vname,NF90_DOUBLE,dimids2,varid))
             zero=0.0d0
             fillval = zero/ zero
-            call check( nf90_put_att(ncid, varid, "_FillValue", fillval) )
+            !call check( nf90_put_att(ncid, varid, "_FillValue", fillval) )
             call check( nf90_enddef(ncid) )
 
             call check( nf90_put_var(ncid,varid,reshape(va,[NX,NY])))
@@ -73,7 +71,7 @@ contains
     subroutine ncread(sns,ctns,pns,s,ct,p)
 
         !character (len = *), parameter :: FILE_NAME = "/home/z3439823/mymatlab/omega/ansu_utils/exp219/data/os_input.nc"
-        character (len = *), parameter :: FILE_NAME = "/home/z3439823/mymatlab/omega/ansu_utils/exp206/data/os_input.nc"
+        character (len = *), parameter :: FILE_NAME = "/home/z3439823/mymatlab/omega/ansu_utils/exp229/data/os_input.nc"
         real(rk), dimension(:,:), intent(inout) :: sns, ctns, pns
         real(rk), dimension(:,:,:), intent(inout) :: s, ct, p
         integer :: ncid, varid

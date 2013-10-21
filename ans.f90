@@ -246,6 +246,8 @@ contains
         integer :: setnan, i, j
         real(rk) :: nan
         logical :: zonally_periodic
+        integer, allocatable, dimension(:) :: pts
+
 
         namelist /user_input/ zonally_periodic
 
@@ -262,13 +264,14 @@ contains
         allocate(region(size(regions(1)%points)))
         region=regions(1)%points
 
+
         reg=.false.
         do i=1,size(region)
             reg(region(i))=.true.
         enddo
 
         en=reg.and.cshift(reg,1) ! en is true at a point if its eastward neighbor is in the region
-        do i=nx,nx*ny,nx ! correct western boundary
+        do i=nx,nx*ny,nx ! correct eastern boundary
             en(i)=reg(i).and.reg(i-nx+1)
         enddo
 
@@ -286,9 +289,16 @@ contains
             sreg(i)=sreg(i-1)+j
         enddo
         sreg_en=cshift(sreg,1) ! sparse indices of eastward neighbours
-        do i=nx,nx*ny,nx ! correct western boundary
-            sreg_en(i)=sreg_en(i-nx+1)
+!        do i=1,size(sreg_en)
+!            write(*,*) 'sreg_en(',i,'): ',sreg_en(i)
+!        enddo
+        do i=nx,nx*ny,nx ! correct eastern boundary
+            sreg_en(i)=sreg(i-nx+1)
         enddo
+!        do i=1,size(sreg_en)
+!            write(*,*) 'sreg_en(',i,'): ',sreg_en(i)
+!        enddo
+
 
         allocate(j1_ew(sum(en)))
         allocate(j2_ew(sum(en)))
@@ -330,12 +340,16 @@ contains
         !condition
         y(size(y))=0.0d0
 
+        call ncwrite(pack(dble(j1),.true.),'j1.nc','j1',1)
+        call ncwrite(pack(dble(j2),.true.),'j2.nc','j2',1)
+        call ncwrite(pack(y,.true.),'y.nc','y',1)
+
 !        do i=1,size(j1)
 !            write(*,*) j1(i)
 !        enddo
-        write(*,*) 'sizej1 ', size(j1)
-        write(*,*) 'sizej2 ', size(j2)
-        write(*,*) 'size(y) ',size(y)
+!        write(*,*) 'sizej1 ', size(j1)
+!        write(*,*) 'sizej2 ', size(j2)
+!        write(*,*) 'size(y) ',size(y)
     end subroutine get_j
 
 
@@ -354,11 +368,11 @@ contains
         real(rk) :: damp=0.0d0 ! damping parameter
         logical :: wantse=.false. ! standard error estimates
         real(rk), dimension(1) :: se=(/0.0d0/)
-        real(rk) :: atol=0.0d0
+        real(rk) :: atol=1.0d-7
         real(rk) :: btol=0.0d0
         real(rk) :: conlim=0.0d0
         !integer :: itnlim=450 ! max. number of iterations
-        integer :: itnlim=450 ! max. number of iterations
+        integer :: itnlim=50000 ! max. number of iterations
         integer :: nout=-99 ! output file
         integer :: istop=-99 ! reason for termination
         integer :: itn=-99 ! number of iterations performed
@@ -406,7 +420,8 @@ contains
 !            write(*,*) x(i)
 !        enddo
 !        call ncwrite(pack(x,.true.),'x.nc','x',2)
-        drho_=nan
+        drho_(:)=nan
+        call ncwrite(pack(drho_,.true.),'drho_.nc','drho_',2)
         do i=1,size(regions(1)%points)
             drho_(regions(1)%points(i))= x(i)
         enddo
