@@ -22,8 +22,7 @@ $(LSQRDIR)/%.o : $(LSQRDIR)/%.f90 ; ${FORT} ${FLAGS} -c -o $@ $< -J $(LSQRDIR)
 %.o : %.f90 ; ${FORT} ${FLAGS} -c -o $@ $< $(INCFLAGS)
 
 lsqrfiles= $(LSQRDIR)/lsqrDataModule.o $(LSQRDIR)/lsqrblas.o \
-$(LSQRDIR)/lsqrblasInterface.o $(LSQRDIR)/lsqrDataModule.o \
-$(LSQRDIR)/lsqrModule.o 
+$(LSQRDIR)/lsqrblasInterface.o $(LSQRDIR)/lsqrModule.o 
 
 files = $(lsqrfiles) stuff.o  ncutils.o ans.o run.o 
 

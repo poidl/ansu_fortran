@@ -62,7 +62,7 @@ program run
 
     !write(*,*) 'size(regions): ', size(regions(1)%points)
     do i=1,size(regions(1)%points)
-        write(*,*) 'regions(1)%point(', i, '): ',  regions(1)%points(i)
+        write(*,*) 'regions(1)%point(', i, '): ',  int(regions(1)%points(i))
     enddo
     write(*,'(A, F20.16)') 'hoit: ', sns(50,6)
 

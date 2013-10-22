@@ -13,7 +13,7 @@ module ans_mod
     public mld
 
     type, public :: cell
-        real, dimension(:), pointer :: points
+        integer, dimension(:), pointer :: points
     end type cell
 
     type(cell), dimension(:), pointer, public :: regions
@@ -40,20 +40,6 @@ module ans_mod
             real (rk)  :: gsw_beta
             real (rk) :: sa, ct, p
         end function gsw_beta
-!
-!        subroutine LSQR  ( m, n, Aprod1, Aprod2, b, damp, wantse,         &
-!                     x, se,                                         &
-!                     atol, btol, conlim, itnlim, nout,              &
-!                     istop, itn, Anorm, Acond, rnorm, Arnorm, xnorm )
-!            integer, parameter :: rk = selected_real_kind(14,30)
-!            integer,  intent(in)  :: m, n, itnlim, nout
-!            integer,  intent(out) :: istop, itn
-!            logical,  intent(in)  :: wantse
-!            real(rk), intent(in)  :: b(m)
-!            real(rk), intent(out) :: x(n), se(*)
-!            real(rk), intent(in)  :: atol, btol, conlim, damp
-!            real(rk), intent(out) :: Anorm, Acond, rnorm, Arnorm, xnorm
-!        end subroutine LSQR
     end interface
 
 
@@ -238,11 +224,11 @@ contains
 
     end subroutine epsilon_
 
-    subroutine get_j()
+    subroutine lsqr_Ay()
         real(rk),  dimension(nx*ny) :: drhox_, drhoy_
-        logical, dimension(nx*ny) :: reg
+        logical, dimension(nx*ny) :: reg, en, nn
         integer, dimension(nx*ny) :: sreg, sreg_en, sreg_nn
-        integer, allocatable, dimension(:) :: region, en, nn, j1_ew, j2_ew, j1_ns, j2_ns
+        integer, allocatable, dimension(:) :: region, j1_ew, j2_ew, j1_ns, j2_ns
         integer :: setnan, i, j
         real(rk) :: nan
         logical :: zonally_periodic
@@ -282,31 +268,24 @@ contains
         nn=reg.and.cshift(reg,nx)
         nn(nx*(ny-1)+1:ny*nx)=.false.
 
-        sreg(1)=reg(1) ! cumulative sum
+        sreg(1)=merge(1,0,reg(1)) ! cumulative sum
         ! sparse indices of points forming the region (points of non-region are indexed with dummy)
         do i=2,size(reg)
-            j=reg(i)
-            sreg(i)=sreg(i-1)+j
+            sreg(i)=sreg(i-1)+merge(1,0,reg(i))
         enddo
         sreg_en=cshift(sreg,1) ! sparse indices of eastward neighbours
-!        do i=1,size(sreg_en)
-!            write(*,*) 'sreg_en(',i,'): ',sreg_en(i)
-!        enddo
+
         do i=nx,nx*ny,nx ! correct eastern boundary
             sreg_en(i)=sreg(i-nx+1)
         enddo
-!        do i=1,size(sreg_en)
-!            write(*,*) 'sreg_en(',i,'): ',sreg_en(i)
-!        enddo
 
-
-        allocate(j1_ew(sum(en)))
-        allocate(j2_ew(sum(en)))
-        allocate(y(sum(en)+sum(nn)+1)) ! A*x=y
+        allocate(j1_ew(count(en)))
+        allocate(j2_ew(count(en)))
+        allocate(y(count(en)+count(nn)+1)) ! A*x=y
 
         j=1
         do i=1,size(en)
-            if (en(i)==1) then
+            if (en(i)) then
                 j1_ew(j)=sreg_en(i) ! j1 are j-indices for matrix coefficient 1
                 j2_ew(j)=sreg(i) ! j2 are j-indices for matrix coefficient -1
                 y(j)=drhox_(i)
@@ -316,15 +295,14 @@ contains
 
         sreg_nn=cshift(sreg,nx)
 
-
-        allocate(j1_ns(sum(nn)))
-        allocate(j2_ns(sum(nn)))
+        allocate(j1_ns(count(nn)))
+        allocate(j2_ns(count(nn)))
         j=1
         do i=1,size(nn)
-            if (nn(i)==1) then
+            if (nn(i)) then
                 j1_ns(j)=sreg_nn(i) ! j1 are j-indices for matrix coefficient 1
                 j2_ns(j)=sreg(i) ! j2 are j-indices for matrix coefficient -1
-                y(sum(en)+j)=drhoy_(i)
+                y(count(en)+j)=drhoy_(i)
                 j=j+1
             endif
         enddo
@@ -344,13 +322,7 @@ contains
         call ncwrite(pack(dble(j2),.true.),'j2.nc','j2',1)
         call ncwrite(pack(y,.true.),'y.nc','y',1)
 
-!        do i=1,size(j1)
-!            write(*,*) j1(i)
-!        enddo
-!        write(*,*) 'sizej1 ', size(j1)
-!        write(*,*) 'sizej2 ', size(j2)
-!        write(*,*) 'size(y) ',size(y)
-    end subroutine get_j
+    end subroutine lsqr_Ay
 
 
     subroutine solve_lsqr(drho)
@@ -386,7 +358,7 @@ contains
         setnan=0 ! hide division by 0 at compile time
         nan=0d0/setnan
 
-        call get_j()
+        call lsqr_Ay()
 
         allocate(x(size(regions(1)%points)))
         allocate(b(size(y)))
