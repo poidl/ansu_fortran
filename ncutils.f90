@@ -5,8 +5,8 @@
 !
 !Translated to Fortran by S. Riha (2013)
 
-module ncutils_mod
-    use stuff_mod
+module ncutils
+    use stuff
     use netcdf
     implicit none
     public ncwrite
@@ -107,4 +107,4 @@ contains
             stop "Stopped"
         end if
     end subroutine check
-end module ncutils_mod
+end module ncutils

@@ -21,16 +21,28 @@ INCFLAGS = -I$(NCDIR)/include -I$(LSQRDIR)
 $(LSQRDIR)/%.o : $(LSQRDIR)/%.f90 ; ${FORT} ${FLAGS} -c -o $@ $< -J $(LSQRDIR)
 %.o : %.f90 ; ${FORT} ${FLAGS} -c -o $@ $< $(INCFLAGS)
 
-lsqrfiles= $(LSQRDIR)/lsqrDataModule.o $(LSQRDIR)/lsqrblas.o \
-$(LSQRDIR)/lsqrblasInterface.o $(LSQRDIR)/lsqrModule.o 
 
-files = $(lsqrfiles) stuff.o  ncutils.o ans.o run.o 
+lsqrdeps= $(LSQRDIR)/lsqrDataModule.o $(LSQRDIR)/lsqrblas.o \
+$(LSQRDIR)/lsqrblasInterface.o 
 
-run_exe: $(files)
+files = $(lsqrdeps) $(LSQRDIR)/lsqrModule.o  stuff.o  ncutils.o ans.o run.o
+
+
+run_exe: run.o $(files)
 	$(FORT) $(FLAGS) -o $@  $(files) \
 	$(GSWDIR)/gsw_oceanographic_toolbox.o $(LLFLAGS)
+
+
+$(LSQRDIR)/lsqrModule.o: $(lsqrdeps)
+
+ans.o: stuff.o ncutils.o $(LSQRDIR)/lsqrModule.o
+
+ncutils.o: stuff.o
+
+run.o:  ncutils.o ans.o 
 
 clean:
 	rm -f *.o *.mod
 	rm -f $(LSQRDIR)/*.o $(LSQRDIR)/*.mod
+	rm run_exe
 	

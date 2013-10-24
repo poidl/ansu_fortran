@@ -5,24 +5,22 @@
 !
 !Translated to Fortran by S. Riha (2013)
 
-module ans_mod
-    use stuff_mod
+module ans
+    use stuff
     use lsqrModule, only : LSQR
-    use ncutils_mod
+    use ncutils
     implicit none
-    public mld
 
-    type, public :: cell
-        integer, dimension(:), pointer :: points
-    end type cell
+!=============================================================
+    public :: mld, delta_tilde_rho, find_regions, solve_lsqr
 
-    type(cell), dimension(:), pointer, public :: regions
+!=============================================================
+    private
 
-    real(rk),  dimension(NX,NY), public :: drhox, drhoy
     real(rk),  allocatable, dimension(:) :: y
     integer,  allocatable, dimension(:) ::  j1, j2
 
-
+!=============================================================
 
     interface
         function gsw_rho(sa,ct,p)
@@ -43,20 +41,19 @@ module ans_mod
     end interface
 
 
-
 contains
     subroutine mld(s,ct,p,cut_off_choice)
 
-
         real(rk), dimension(:,:,:), intent(in) :: s, ct, p
         real(rk), dimension(:,:), intent(out) :: cut_off_choice
-        real(rk), dimension(size(s,1)*size(s,2),size(s,3)) :: rho, surf_dens_, thresh
-        real(rk), dimension(size(s,1)*size(s,2)*size(s,3)) :: pflat
-        real(rk), dimension(size(s,1)*size(s,2)) :: surf_dens, p_, cut_off_choice_
-        logical, dimension(size(s,1)*size(s,2),size(s,3)) :: pos
-        integer, dimension(size(s,1)*size(s,2)) :: ip
+
+        real(rk), dimension(nx*ny,nz) :: rho, surf_dens_, thresh
+        real(rk), dimension(nx*ny*nz) :: pflat
+        real(rk), dimension(nx*ny) :: surf_dens, p_, cut_off_choice_
+        logical, dimension(nx*ny,nz) :: pos
+        integer, dimension(nx*ny) :: ip
         integer, dimension(4) :: C3
-        integer :: nxy, i, j, k, setnan
+        integer :: nxy, i, j, k
 
         nxy=nx*ny
 
@@ -69,17 +66,9 @@ contains
         enddo
 
         surf_dens=rho(:,1)
-
-!        call ncwrite(pack(surf_dens,.true.),'surf_dens.nc','surf_dens',2)
-
         surf_dens_= spread(surf_dens,2,nz)
-
-!        call ncwrite(pack(surf_dens_,.true.),'surf_dens_.nc','surf_dens_',3)
-
         thresh= surf_dens_+0.3d0
-
         pos=(thresh-rho)>0.0d0
-
         ip=count(pos,2)
 
         pflat=pack(p,.true.)
@@ -87,27 +76,23 @@ contains
             p_(i)=pflat(i+(ip(i)-1)*nxy)
         enddo
 
-!        call ncwrite(p_,'p_.nc','p_',2)
+        call getnan(nan)
 
-        setnan=0 ! hide division by 0 at compile time
-        cut_off_choice_=0d0/setnan
-
+        cut_off_choice_=nan
         cut_off_choice_=merge(p_,cut_off_choice_,ip>0)
-
         cut_off_choice=reshape(cut_off_choice_,[nx,ny])
-
-!        call ncwrite(pack(cut_off_choice,.true.),'cut_off_choice.nc','cutoff',2)
-
 
     end subroutine mld
 
-    subroutine delta_tilde_rho(sns,ctns,pns)
+
+    subroutine delta_tilde_rho(sns,ctns,pns,drhox,drhoy)
+
         real(rk), dimension(:,:), intent(in) :: sns, ctns, pns
-        real(rk), dimension(size(sns,1), size(sns,2)) :: gradx_s, grady_s, gradx_ct, grady_ct
-        real(rk), dimension(size(sns,1),size(sns,2)) :: r1, r2, sns_, ctns_, pmid
-        real(rk), dimension(size(sns,1),size(sns,2)) :: debug
-        integer :: i, j, nxy, setnan
-        real(rk) :: nan
+        real(rk), dimension(:,:), intent(out) :: drhox,drhoy
+        real(rk), dimension(nx, ny) :: gradx_s, grady_s, gradx_ct, grady_ct
+        real(rk), dimension(nx,ny) :: r1, r2, sns_, ctns_, pmid
+        real(rk), dimension(nx,ny) :: debug
+        integer :: i, j, nxy
         logical :: zonally_periodic
 
         namelist /user_input/ zonally_periodic
@@ -116,8 +101,7 @@ contains
         read(1,user_input)
         close(1)
 
-        setnan=0 ! hide division by 0 at compile time
-        nan=0d0/setnan
+        call getnan(nan)
 
         ! drhox
         pmid=0.5d0*(pns+cshift(pns,1,1))
@@ -165,75 +149,16 @@ contains
     end subroutine delta_tilde_rho
 
 
-
-    subroutine epsilon_(sns,ctns,pns,e1t,e2t,ex,ey)
-        real(rk), dimension(:,:), intent(in) :: sns, ctns, pns, e1t, e2t
-        real(rk), dimension(:,:), intent(out) :: ex, ey
-        real(rk), dimension(size(sns,1), size(sns,2)) :: gradx_s, grady_s, gradx_ct, grady_ct
-        real(rk), dimension(size(sns,1),size(sns,2)) :: alpha, beta, alphax, alphay, betax, betay
-        real(rk), dimension(size(sns,1),size(sns,2)) :: debug
-        integer :: i, j, nxy, setnan
-        real(rk) :: nan
-        logical :: zonally_periodic
-
-        namelist /user_input/ zonally_periodic
-
-        open(1,file='user_input.nml')
-        read(1,user_input)
-        close(1)
-
-!        call ncwrite(pack(sns,.true.),'e1t.nc','e1t',2)
-        call grad_surf(ctns,e1t,e2t,gradx_ct,grady_ct)
-        call grad_surf(sns,e1t,e2t,gradx_s,grady_s)
-!        call ncwrite(pack(ctns,.true.),'e1t.nc','e1t',2)
-!        call ncwrite(pack(grady_ct,.true.),'grady_ct.nc','grady_ct',2)
-!        call ncwrite(pack(gradx_s,.true.),'gradx_s.nc','gradx_s',2)
-
-        nxy=nx*ny
-
-        do j=1,ny
-            do i=1,nx
-                alpha(i,j)=gsw_alpha(sns(i,j),ctns(i,j),pns(i,j))
-            enddo
-        enddo
-        do j=1,ny
-            do i=1,nx
-                beta(i,j)=gsw_beta(sns(i,j),ctns(i,j),pns(i,j))
-            enddo
-        enddo
-
-        alphax=0.5d0*(alpha+cshift(alpha,1,1))
-        alphay=0.5d0*(alpha+cshift(alpha,1,2))
-        betax=0.5d0*(beta+cshift(beta,1,1))
-        betay=0.5d0*(beta+cshift(beta,1,2))
-
-        setnan=0 ! hide division by 0 at compile time
-        nan=0d0/setnan
-
-        alphay(:,ny)=nan
-        betay(:,ny)=nan
-
-        if (.not.(zonally_periodic)) then
-            alphax(nx,:)=nan
-            betax(nx,:)=nan
-        endif
-
-        ex=betax*gradx_s-alphax*gradx_ct
-        ey=betay*grady_s-alphay*grady_ct
-
-
-    end subroutine epsilon_
-
-    subroutine lsqr_Ay()
+    subroutine lsqr_Ay(regions,drhox,drhoy)
+        type(region_type), dimension(:), allocatable, intent(in) :: regions
+        real(rk), dimension(:,:), intent(in) :: drhox,drhoy
         real(rk),  dimension(nx*ny) :: drhox_, drhoy_
         logical, dimension(nx*ny) :: reg, en, nn
         integer, dimension(nx*ny) :: sreg, sreg_en, sreg_nn
         integer, allocatable, dimension(:) :: region, j1_ew, j2_ew, j1_ns, j2_ns
-        integer :: setnan, i, j
-        real(rk) :: nan
+        integer :: i, j
         logical :: zonally_periodic
         integer, allocatable, dimension(:) :: pts
-
 
         namelist /user_input/ zonally_periodic
 
@@ -241,15 +166,13 @@ contains
         read(1,user_input)
         close(1)
 
-        setnan=0 ! hide division by 0 at compile time
-        nan=0d0/setnan
+        call getnan(nan)
 
         drhox_=pack(drhox,.true.)
         drhoy_=pack(drhoy,.true.)
 
         allocate(region(size(regions(1)%points)))
         region=regions(1)%points
-
 
         reg=.false.
         do i=1,size(region)
@@ -325,13 +248,14 @@ contains
     end subroutine lsqr_Ay
 
 
-    subroutine solve_lsqr(drho)
-        real(rk),  dimension(NX,NY), intent(out) :: drho
-        real(rk),  dimension(NX*NY) :: drho_
+    subroutine solve_lsqr(regions,drhox,drhoy,drho)
+        type(region_type), dimension(:), allocatable, intent(in) :: regions
+        real(rk), dimension(:,:), intent(in) :: drhox,drhoy
+        real(rk),  dimension(nx,ny), intent(out) :: drho
+        real(rk),  dimension(nx*ny) :: drho_
         integer, allocatable, dimension(:) :: j1, j2
         real(rk), allocatable, dimension(:) :: x,b
-        integer :: setnan, i, j
-        real(rk) :: nan
+        integer :: i, j
         logical :: zonally_periodic
         namelist /user_input/ zonally_periodic
 
@@ -355,10 +279,9 @@ contains
         read(1,user_input)
         close(1)
 
-        setnan=0 ! hide division by 0 at compile time
-        nan=0d0/setnan
+        call getnan(nan)
 
-        call lsqr_Ay()
+        call lsqr_Ay(regions,drhox,drhoy)
 
         allocate(x(size(regions(1)%points)))
         allocate(b(size(y)))
@@ -366,18 +289,6 @@ contains
         b=y
         m=size(y)
         n=size(x)
-
-!        write(*,*) 'b: ***************'
-!        do i=1,size(b)
-!            write(*,*) b(i)
-!        enddo
-!        write(*,*) 'x: ***************'
-!        do i=1,size(x)
-!            write(*,*) x(i)
-!        enddo
-
-!        call Aprod1(size(y),size(regions(1)%points), x,y)
-!        call Aprod2(size(y),size(regions(1)%points), x,y)
 
         write(*,*) 'calling LSQR...'
         call LSQR  ( m, n, Aprod1, Aprod2, b, damp, wantse,         &
@@ -387,22 +298,19 @@ contains
         write(*,*) 'istop: ',istop
         write(*,*) 'rnorm: ',rnorm
         write(*,*) 'Arnorm/(Anorm*rnorm): ', Arnorm/(Anorm*rnorm)
-!        write(*,*) 'x: ***************'
-!        do i=1,size(x)
-!            write(*,*) x(i)
-!        enddo
-!        call ncwrite(pack(x,.true.),'x.nc','x',2)
+
         drho_(:)=nan
         call ncwrite(pack(drho_,.true.),'drho_.nc','drho_',2)
         do i=1,size(regions(1)%points)
             drho_(regions(1)%points(i))= x(i)
         enddo
-        drho=reshape( drho_,(/NX,NY/) )
-        !call ncwrite(pack(drho,.true.),'drho.nc','drho',2)
+        drho=reshape( drho_,(/nx,ny/) )
 
     end subroutine solve_lsqr
 
+
     subroutine Aprod1(m,n,x,y)
+
         integer,  intent(in)    :: m,n
         real(rk), intent(in)    :: x(n)
         real(rk), intent(inout) :: y(m)
@@ -416,7 +324,9 @@ contains
 
     end subroutine Aprod1
 
+
     subroutine Aprod2(m,n,x,y)
+
         integer,  intent(in)    :: m,n
         real(rk), intent(inout)    :: x(n)
         real(rk), intent(in) :: y(m)
@@ -432,13 +342,14 @@ contains
         do j=1,n
             x(j)=x(j)+y(m)
         enddo
+
     end subroutine Aprod2
 
+
     subroutine grad_surf(f,e1t,e2t,fx,fy)
+
         real(rk),  dimension(:,:), intent(in) :: f, e1t, e2t
         real(rk),  dimension(:,:), intent(out) :: fx, fy
-        integer :: setnan
-        real(rk) :: nan
         logical :: zonally_periodic
 
         namelist /user_input/ zonally_periodic
@@ -449,27 +360,25 @@ contains
 
         fx=(cshift(f,1,1)-f)/e1t
 
+        call getnan(nan)
 
-        setnan=0 ! hide division by 0 at compile time
-        nan=0d0/setnan
         if (.not.(zonally_periodic)) then
-            fx(size(f,1),:)=nan
+            fx(nx,:)=nan
         endif
 
         fy=(cshift(f,1,2)-f)/e2t
 
-!        call ncwrite(pack(fy,.true.),'fy.nc','fy',2)
-
-
     end subroutine grad_surf
 
 
-    subroutine find_regions(pns)
+    subroutine find_regions(pns,regions)
+
+        type(region_type), dimension(:), allocatable, intent(out) :: regions
         real(rk),  dimension(:,:), intent(in) :: pns
-        logical,  dimension(size(pns,1),size(pns,2)) :: wet
-        logical,  dimension(size(pns,1)*size(pns,2)) :: bool, wet_
-        integer,  dimension(size(pns,1)*size(pns,2)) :: L_
-        integer, dimension(size(pns,2)) :: east, west
+        logical,  dimension(nx,ny) :: wet
+        logical,  dimension(nx*ny) :: bool, wet_
+        integer,  dimension(nx*ny) :: L_
+        integer, dimension(ny) :: east, west
         integer :: k, i, j, ii, iregion,kk,kkk
         integer, allocatable, dimension(:) :: idx, neighbours, neighbours_tmp
         logical :: zonally_periodic
@@ -480,7 +389,6 @@ contains
         read(1,user_input)
         close(1)
 
-
         wet=.not.(isnan(pns))
         wet_=pack(wet,.true.)
 
@@ -488,9 +396,7 @@ contains
         iregion=1 ! region label
 
         do while (.true.)
-            if (allocated(idx)) then
-                deallocate(idx)
-            endif
+            if (allocated(idx)) deallocate(idx)
             allocate(idx(1))
             ! find index of first wet point
             do i = 1, size(wet_)
@@ -500,18 +406,14 @@ contains
                 endif
             end do
 
-            if (i==size(wet_)+1) then
-                exit
-            endif
+            if (i==size(wet_)+1) exit
 
             idx(1)=ii ! linear indices of the pixels that were just labeled
             wet_(idx(1))=.false. ! set the pixel to 0
             L_(idx(1)) = iregion ! label first point
 
             do while (size(idx)/=0) ! find neighbours
-                if (allocated(neighbours)) then
-                    deallocate(neighbours)
-                endif
+                if (allocated(neighbours)) deallocate(neighbours)
                 allocate(neighbours(size(idx)*4)) ! each point has 4 neighbours
                 neighbours(1:size(idx))=idx+1
                 neighbours(1*size(idx)+1:2*size(idx))=idx-1
@@ -628,7 +530,6 @@ contains
             iregion=iregion+1
         enddo
 
-
         allocate(regions(iregion-1))
         bool=.false.
 
@@ -646,7 +547,66 @@ contains
                 endif
             enddo
         enddo
+
     end subroutine find_regions
 
 
-end module ans_mod
+!    subroutine epsilon_(sns,ctns,pns,e1t,e2t,ex,ey)
+!        real(rk), dimension(:,:), intent(in) :: sns, ctns, pns, e1t, e2t
+!        real(rk), dimension(:,:), intent(out) :: ex, ey
+!        real(rk), dimension(nx, ny) :: gradx_s, grady_s, gradx_ct, grady_ct
+!        real(rk), dimension(nx,ny) :: alpha, beta, alphax, alphay, betax, betay
+!        real(rk), dimension(nx,ny) :: debug
+!        integer :: i, j, nxy, setnan
+!        real(rk) :: nan
+!        logical :: zonally_periodic
+!
+!        namelist /user_input/ zonally_periodic
+!
+!        open(1,file='user_input.nml')
+!        read(1,user_input)
+!        close(1)
+!
+!        call ncwrite(pack(sns,.true.),'e1t.nc','e1t',2)
+!        call grad_surf(ctns,e1t,e2t,gradx_ct,grady_ct)
+!        call grad_surf(sns,e1t,e2t,gradx_s,grady_s)
+!        call ncwrite(pack(ctns,.true.),'e1t.nc','e1t',2)
+!        call ncwrite(pack(grady_ct,.true.),'grady_ct.nc','grady_ct',2)
+!        call ncwrite(pack(gradx_s,.true.),'gradx_s.nc','gradx_s',2)
+!
+!        nxy=nx*ny
+!
+!        do j=1,ny
+!            do i=1,nx
+!                alpha(i,j)=gsw_alpha(sns(i,j),ctns(i,j),pns(i,j))
+!            enddo
+!        enddo
+!        do j=1,ny
+!            do i=1,nx
+!                beta(i,j)=gsw_beta(sns(i,j),ctns(i,j),pns(i,j))
+!            enddo
+!        enddo
+!
+!        alphax=0.5d0*(alpha+cshift(alpha,1,1))
+!        alphay=0.5d0*(alpha+cshift(alpha,1,2))
+!        betax=0.5d0*(beta+cshift(beta,1,1))
+!        betay=0.5d0*(beta+cshift(beta,1,2))
+!
+!        setnan=0 ! hide division by 0 at compile time
+!        nan=0d0/setnan
+!
+!        alphay(:,ny)=nan
+!        betay(:,ny)=nan
+!
+!        if (.not.(zonally_periodic)) then
+!            alphax(nx,:)=nan
+!            betax(nx,:)=nan
+!        endif
+!
+!        ex=betax*gradx_s-alphax*gradx_ct
+!        ey=betay*grady_s-alphay*grady_ct
+!
+!
+!    end subroutine epsilon_
+
+end module ans
