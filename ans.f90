@@ -12,7 +12,8 @@ module ans
     implicit none
 
 !=============================================================
-    public :: mld, delta_tilde_rho, find_regions, solve_lsqr
+    public :: mld, delta_tilde_rho, find_regions, solve_lsqr, &
+                    dz_from_drho
 
 !=============================================================
     private
@@ -42,6 +43,110 @@ module ans
 
 
 contains
+    subroutine dz_from_drho(sns, ctns, pns, s, ct, p, drho)
+        real(rk), dimension(:,:), intent(inout) :: sns, ctns, pns
+        real(rk), dimension(:,:,:), intent(in) :: s, ct, p
+        real(rk), dimension(:,:), intent(in) :: drho
+        real(rk) :: delta_root
+        real(rk), dimension(nx,ny) :: sns_tmp, ctns_tmp, pns_tmp
+        real(rk), dimension(nx,ny) :: rho_surf, t2
+        real(rk), dimension(nx*ny) :: pns_, t2_
+        real(rk), allocatable, dimension(:,:) :: pns_stacked, t2_stacked, &
+                        pns_stacked_new, t2_stacked_new, F
+        integer, dimension(nx*ny) :: inds
+        logical, dimension(nx*ny) :: fr
+
+        integer :: i,j,k, refine_ints, cnt, stack
+
+        namelist /root_finding/ delta_root
+
+        open(1,file='user_input.nml')
+        read(1,root_finding)
+        close(1)
+
+        call getnan(nan)
+
+        sns_tmp=nan;
+        ctns_tmp=nan;
+        pns_tmp=nan;
+
+        rho_surf=nan
+        do i=1,nx
+            do j=1,ny
+                rho_surf(i,j)=gsw_rho(sns(i,j),ctns(i,j),pns(i,j))
+            enddo
+        enddo
+
+        t2=rho_surf-drho
+        t2_=pack(t2,.true.)
+
+        inds=(/(i, i=1,nx*ny)/)
+        fr=.true.
+
+        pns_=pack(pns,.true.)
+        refine_ints=100
+
+        cnt=0
+        do while (.true.)
+            cnt=cnt+1
+            if (cnt==1) then
+                stack=nz
+            else if (cnt==2) then
+                stack=refine_ints+1
+            endif
+
+            if ((cnt==1).or.(cnt==2)) then
+                allocate(pns_stacked(nx*ny,stack))
+                allocate(t2_stacked(nx*ny,stack))
+                pns_stacked=spread(pns_,2,stack)
+                t2_stacked=spread(t2_,2,stack)
+            endif
+
+            allocate(pns_stacked_new(count(fr),stack))
+            allocate(t2_stacked_new(count(fr),stack))
+
+            j=1
+            do i=1,size(fr)
+                if (fr(i)) then
+                    pns_stacked_new(j,:)=pns_stacked(i,:)
+                    t2_stacked_new(j,:)=t2_stacked(i,:)
+                    j=j+1
+                endif
+            enddo
+
+            deallocate(pns_stacked)
+            deallocate(t2_stacked)
+            allocate(pns_stacked(count(fr),stack))
+            allocate(t2_stacked(count(fr),stack))
+            pns_stacked=pns_stacked_new
+            t2_stacked=t2_stacked_new
+
+            allocate(F(count(fr),stack))
+
+            do k=1,nz
+                do j=1,ny
+                    do i=1,nx
+                        F(i+(j-1)*nx,k)=gsw_rho(s(i,j,k),ct(i,j,k),pns_stacked(i+(j-1)*nx,k)) &
+                                        -t2_stacked(i+(j-1)*nx,k)
+                    enddo
+                enddo
+            enddo
+
+            call ncwrite(pack(F,.true.),'F.nc','F',3)
+
+            !write(*,*) 'size(pns_stacked): ',size(pns_stacked,2)
+            exit
+            !! DEALLOCATE t1, pns_stacked, t2_stacked
+        enddo
+
+
+
+    end subroutine dz_from_drho
+
+!    subroutine root_core(F,delta,stack,inds,refine_ints, &
+!                            s,ct,p,sns,ctns,pns)
+!
+!    end subroutine root_core
     subroutine mld(s,ct,p,cut_off_choice)
 
         real(rk), dimension(:,:,:), intent(in) :: s, ct, p
@@ -95,10 +200,10 @@ contains
         integer :: i, j, nxy
         logical :: zonally_periodic
 
-        namelist /user_input/ zonally_periodic
+        namelist /domain/ zonally_periodic
 
         open(1,file='user_input.nml')
-        read(1,user_input)
+        read(1,domain)
         close(1)
 
         call getnan(nan)
@@ -160,10 +265,10 @@ contains
         logical :: zonally_periodic
         integer, allocatable, dimension(:) :: pts
 
-        namelist /user_input/ zonally_periodic
+        namelist /domain/ zonally_periodic
 
         open(1,file='user_input.nml')
-        read(1,user_input)
+        read(1,domain)
         close(1)
 
         call getnan(nan)
@@ -257,7 +362,7 @@ contains
         real(rk), allocatable, dimension(:) :: x,b
         integer :: i, j
         logical :: zonally_periodic
-        namelist /user_input/ zonally_periodic
+        namelist /domain/ zonally_periodic
 
         ! begin LSQR arguments, as described in lsqrModule.f90
         integer :: m, n
@@ -276,7 +381,7 @@ contains
         ! end LSQR arguments
 
         open(1,file='user_input.nml')
-        read(1,user_input)
+        read(1,domain)
         close(1)
 
         call getnan(nan)
@@ -352,10 +457,10 @@ contains
         real(rk),  dimension(:,:), intent(out) :: fx, fy
         logical :: zonally_periodic
 
-        namelist /user_input/ zonally_periodic
+        namelist /domain/ zonally_periodic
 
         open(1,file='user_input.nml')
-        read(1,user_input)
+        read(1,domain)
         close(1)
 
         fx=(cshift(f,1,1)-f)/e1t
@@ -383,10 +488,10 @@ contains
         integer, allocatable, dimension(:) :: idx, neighbours, neighbours_tmp
         logical :: zonally_periodic
 
-        namelist /user_input/ zonally_periodic
+        namelist /domain/ zonally_periodic
 
         open(1,file='user_input.nml')
-        read(1,user_input)
+        read(1,domain)
         close(1)
 
         wet=.not.(isnan(pns))

@@ -16,16 +16,10 @@ program run
     real(rk), dimension(nx,ny) :: sns, ctns, pns, drhox, drhoy, drho
     real(rk), dimension(nx,ny) :: cut_off_choice
 
-!    real(rk), dimension(3,4) :: test
-!    integer :: i
-
     call getnan(nan)
 
     call ncread(sns,ctns,pns,s,ct,p)
 
-    !call ncread_debug(ctns)
-!    write(*,'(A, F20.16)') 'hoit: ', sns(90,43)
-!    call ncwrite_debug(pack(ctns,.true.),'ctns.nc','ctns',2)
     call mld(s,ct,p,cut_off_choice)
 
     call ncwrite(pack(cut_off_choice,.true.),'cut_off_choice.nc','cutoff',2)
@@ -50,6 +44,8 @@ program run
 
     call solve_lsqr(regions,drhox,drhoy,drho)
     call ncwrite(pack(drho,.true.),'drho.nc','drho',2)
+
+    call dz_from_drho(sns, ctns, pns, s, ct, p, drho)
 !    write(*,*) 'size(regions_test): ', size(regions_test)
 !    do i=1,size(regions)
 !        write(*,*) 'size(regions(',i,'): ',size(regions(i)%points)

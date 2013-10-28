@@ -52,13 +52,12 @@ contains
 
         else if (mode==3) then
 
-            call check( nf90_def_dim(ncid,"z",101,z_dimid))
+            call check( nf90_def_dim(ncid,"z",NZ,z_dimid))
             call check( nf90_def_dim(ncid,"y",NY,y_dimid))
             call check( nf90_def_dim(ncid,"x",NX,x_dimid))
             dimids3 =  [x_dimid, y_dimid, z_dimid]
             call check( nf90_def_var(ncid,vname,NF90_DOUBLE,dimids3,varid))
-            call check( nf90_close(ncid) )
-            call check( nf90_open(fname, NF90_WRITE, ncid) )
+            call check( nf90_enddef(ncid) )
             call check( nf90_put_var(ncid,varid,reshape(va,[NX,NY,NZ])))
 
         endif

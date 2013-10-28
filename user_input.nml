@@ -1,3 +1,7 @@
-&user_input
+&domain
 zonally_periodic=T
+/
+
+&root_finding
+delta_root=1.0d-11
 /
