@@ -60,12 +60,46 @@ contains
             call check( nf90_enddef(ncid) )
             call check( nf90_put_var(ncid,varid,reshape(va,[NX,NY,NZ])))
 
+
         endif
 
         call check( nf90_close(ncid) )
 
     end subroutine ncwrite
 
+
+    subroutine ncwrite_new(va,fname,vname)
+        real(rk), dimension(:,:), intent(in) :: va
+        character (len = *), intent(in) :: fname
+        character (len = *), intent(in) :: vname
+        !real(rk), dimension(:,:) :: va2
+        !integer, intent(in) :: mode
+        integer :: ncid, varid, x_dimid, y_dimid, z_dimid
+        integer, dimension(1) :: dimids1
+        integer, dimension(2) :: dimids
+        integer, dimension(3) :: dimids3
+        integer :: n1,n2
+        real(rk) :: zero, fillval
+
+        n1=size(va,1)
+        n2=size(va,2)
+        !n3=size(va,3)
+
+        call check( nf90_create(fname,ior(nf90_netcdf4, nf90_classic_model),ncid))
+
+
+        !call check( nf90_def_dim(ncid,"z",n3,z_dimid))
+        call check( nf90_def_dim(ncid,"y",n2,y_dimid))
+        call check( nf90_def_dim(ncid,"x",n1,x_dimid))
+        dimids =  [x_dimid, y_dimid]
+        call check( nf90_def_var(ncid,vname,NF90_DOUBLE,dimids,varid))
+        call check( nf90_enddef(ncid) )
+        call check( nf90_put_var(ncid,varid,reshape(va,[n1,n2])))
+
+
+        call check( nf90_close(ncid) )
+
+    end subroutine ncwrite_new
 
     subroutine ncread(sns,ctns,pns,s,ct,p)
 

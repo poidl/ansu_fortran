@@ -46,6 +46,7 @@ program run
     call ncwrite(pack(drho,.true.),'drho.nc','drho',2)
 
     call dz_from_drho(sns, ctns, pns, s, ct, p, drho)
+    call ncwrite(pack(sns,.true.),'sns.nc','sns',2)
 !    write(*,*) 'size(regions_test): ', size(regions_test)
 !    do i=1,size(regions)
 !        write(*,*) 'size(regions(',i,'): ',size(regions(i)%points)
@@ -56,7 +57,8 @@ program run
 !        write(*,*) 'regions(1)%point(', i, '): ',  int(regions(1)%points(i))
 !    enddo
 
-    write(*,'(A, F20.16)') 'hoit: ', sns(50,6)
+    write(*,*) '****END****'
+
 
 end program run
 

@@ -47,28 +47,23 @@ contains
         real(rk), dimension(:,:), intent(inout) :: sns, ctns, pns
         real(rk), dimension(:,:,:), intent(in) :: s, ct, p
         real(rk), dimension(:,:), intent(in) :: drho
-        real(rk) :: delta_root
-        real(rk), dimension(nx,ny) :: sns_tmp, ctns_tmp, pns_tmp
+        real(rk), dimension(nx*ny) :: sns_out, ctns_out, pns_out
+        real(rk), dimension(:,:), allocatable :: s_, ct_, p_
         real(rk), dimension(nx,ny) :: rho_surf, t2
         real(rk), dimension(nx*ny) :: pns_, t2_
         real(rk), allocatable, dimension(:,:) :: pns_stacked, t2_stacked, &
-                        pns_stacked_new, t2_stacked_new, F
-        integer, dimension(nx*ny) :: inds
-        logical, dimension(nx*ny) :: fr
+                        pns_stacked_old, t2_stacked_old, F
+        integer, dimension(:), allocatable :: inds
+        logical, dimension(:), allocatable :: fr
+        logical :: dobreak
 
         integer :: i,j,k, refine_ints, cnt, stack
 
-        namelist /root_finding/ delta_root
-
-        open(1,file='user_input.nml')
-        read(1,root_finding)
-        close(1)
-
         call getnan(nan)
 
-        sns_tmp=nan;
-        ctns_tmp=nan;
-        pns_tmp=nan;
+        sns_out=nan;
+        ctns_out=nan;
+        pns_out=nan;
 
         rho_surf=nan
         do i=1,nx
@@ -80,73 +75,224 @@ contains
         t2=rho_surf-drho
         t2_=pack(t2,.true.)
 
+        allocate(inds(nx*ny))
         inds=(/(i, i=1,nx*ny)/)
+        allocate(fr(nx*ny))
         fr=.true.
 
         pns_=pack(pns,.true.)
         refine_ints=100
 
+        allocate(s_(nx*ny,nz))
+        allocate(ct_(nx*ny,nz))
+        allocate(p_(nx*ny,nz))
+        s_=reshape(s,[nx*ny,nz])
+        ct_=reshape(ct,[nx*ny,nz])
+        p_=reshape(p,[nx*ny,nz])
+
         cnt=0
+        stack=nz
+        allocate(pns_stacked(nx*ny,stack))
+        allocate(t2_stacked(nx*ny,stack))
+        pns_stacked=spread(pns_,2,stack)
+        t2_stacked=spread(t2_,2,stack)
         do while (.true.)
             cnt=cnt+1
-            if (cnt==1) then
-                stack=nz
-            else if (cnt==2) then
-                stack=refine_ints+1
-            endif
 
-            if ((cnt==1).or.(cnt==2)) then
-                allocate(pns_stacked(nx*ny,stack))
-                allocate(t2_stacked(nx*ny,stack))
-                pns_stacked=spread(pns_,2,stack)
-                t2_stacked=spread(t2_,2,stack)
-            endif
+            allocate(F(count(fr),stack))
 
-            allocate(pns_stacked_new(count(fr),stack))
-            allocate(t2_stacked_new(count(fr),stack))
+            do k=1,stack
+                do i=1,size(F,1)
+                    F(i,k)=gsw_rho(s_(i,k),ct_(i,k),pns_stacked(i,k)) &
+                                    -t2_stacked(i,k)
+                enddo
+            enddo
+
+            deallocate(fr)
+            call root_core(F,inds,refine_ints, &
+                            s_,ct_,p_,sns_out,ctns_out,pns_out,fr,dobreak)
+
+
+            allocate(pns_stacked_old(size(fr),stack))
+            allocate(t2_stacked_old(size(fr),stack))
+
+            pns_stacked_old=pns_stacked
+            t2_stacked_old=t2_stacked
+
+            deallocate(pns_stacked)
+            deallocate(t2_stacked)
+            stack=refine_ints+1
+            allocate(pns_stacked(count(fr),stack))
+            allocate(t2_stacked(count(fr),stack))
 
             j=1
             do i=1,size(fr)
                 if (fr(i)) then
-                    pns_stacked_new(j,:)=pns_stacked(i,:)
-                    t2_stacked_new(j,:)=t2_stacked(i,:)
+                    pns_stacked(j,:)=pns_stacked_old(i,1:stack)
+                    t2_stacked(j,:)=t2_stacked_old(i,1:stack)
                     j=j+1
                 endif
             enddo
 
-            deallocate(pns_stacked)
-            deallocate(t2_stacked)
-            allocate(pns_stacked(count(fr),stack))
-            allocate(t2_stacked(count(fr),stack))
-            pns_stacked=pns_stacked_new
-            t2_stacked=t2_stacked_new
+            deallocate(pns_stacked_old)
+            deallocate(t2_stacked_old)
 
-            allocate(F(count(fr),stack))
+            deallocate(F)
 
-            do k=1,nz
-                do j=1,ny
-                    do i=1,nx
-                        F(i+(j-1)*nx,k)=gsw_rho(s(i,j,k),ct(i,j,k),pns_stacked(i+(j-1)*nx,k)) &
-                                        -t2_stacked(i+(j-1)*nx,k)
-                    enddo
-                enddo
-            enddo
+            if (dobreak) then
+                exit
+            endif
 
-            call ncwrite(pack(F,.true.),'F.nc','F',3)
-
-            !write(*,*) 'size(pns_stacked): ',size(pns_stacked,2)
-            exit
-            !! DEALLOCATE t1, pns_stacked, t2_stacked
         enddo
 
-
+        sns=reshape(sns_out,[nx,ny])
+        ctns=reshape(ctns_out,[nx,ny])
+        pns=reshape(pns_out,[nx,ny])
 
     end subroutine dz_from_drho
 
-!    subroutine root_core(F,delta,stack,inds,refine_ints, &
-!                            s,ct,p,sns,ctns,pns)
-!
-!    end subroutine root_core
+
+    subroutine root_core(F,inds,refine_ints, &
+                            s,ct,p,sns,ctns,pns, fr, dobreak)
+
+        real(rk), allocatable, dimension(:,:), intent(in) :: F
+        integer, intent(in) :: refine_ints
+        integer, allocatable, dimension(:), intent(inout) :: inds
+        logical, allocatable, dimension(:), intent(out) :: fr
+        real(rk), allocatable, dimension(:,:), intent(inout) :: s,ct,p
+        real(rk), dimension(nx*ny), intent(inout) :: sns, ctns,pns
+        logical, intent(out) :: dobreak
+
+        logical, allocatable, dimension(:,:) :: F_p, F_n, zc_F_stable
+        logical, allocatable, dimension(:) :: myfinal, cond1, any_zc_F_stable
+        real(rk), allocatable, dimension(:,:) :: s_,ct_,p_
+        real(rk), allocatable, dimension(:) :: F_neg
+        integer, allocatable, dimension(:,:) :: cs
+        integer, allocatable, dimension(:) :: k_zc,k_, inds_tmp, inds_local
+
+        real(rk) :: delta_root, d
+        integer :: i, j, stack, nxy, nxy_new
+
+
+        namelist /root_finding/ delta_root
+
+        open(1,file='user_input.nml')
+        read(1,root_finding)
+        close(1)
+
+
+        dobreak=.false.
+
+        stack=size(F,2)
+        nxy=size(F,1)
+
+        allocate(F_p(nxy,stack))
+        allocate(F_n(nxy,stack))
+
+        F_p= F>=0
+        F_n= F<0
+
+        allocate(zc_F_stable(nxy,stack))
+        zc_F_stable= (F_n).and.(cshift(F_p,1,2))
+        deallocate(F_p)
+        deallocate(F_n)
+        zc_F_stable(:,stack)=.false.
+
+        allocate(cs(nxy,stack))
+
+        do j=1,stack
+            do i=1,nxy
+                cs(i,j)=count(zc_F_stable(i,1:j))+1;
+            enddo
+        enddo
+
+        cs=merge(0,cs,cs/=1)
+
+        allocate(k_zc(nxy))
+        k_zc=sum(cs,2)+1;! vertical index of shallowest stable zero crossing
+
+        allocate(any_zc_F_stable(nxy))
+        any_zc_F_stable=any(zc_F_stable,2)
+
+        deallocate(zc_F_stable)
+
+        allocate(F_neg(nxy))
+        F_neg=nan
+        do i=1,nxy
+            if (any_zc_F_stable(i)) then
+                F_neg(i)=F(i,k_zc(i))
+            endif
+        enddo
+
+        allocate(myfinal(nxy))
+        allocate(cond1(nxy))
+        allocate(fr(nxy))
+        myfinal=(abs(F_neg)<=delta_root)
+        cond1=abs(F_neg)>delta_root;
+        fr= (any_zc_F_stable).and.(cond1)
+        deallocate(cond1)
+        deallocate(F_neg)
+
+        do i=1,nxy
+            if (myfinal(i)) then
+                sns(inds(i))=s(i,k_zc(i))
+                ctns(inds(i))=ct(i,k_zc(i))
+                pns(inds(i))=p(i,k_zc(i))
+            endif
+        enddo
+
+        deallocate(myfinal)
+
+        if (all(.not.(fr))) then
+            dobreak=.true.
+            return
+        endif
+
+        nxy_new=count(fr)
+
+        allocate(inds_tmp(nxy_new))
+        allocate(k_(nxy_new))
+        allocate(inds_local(nxy_new))
+        j=1
+        do i=1,nxy
+            if (fr(i)) then
+                inds_tmp(j)=inds(i)
+                inds_local(j)=i
+                k_(j)=k_zc(i)
+                j=j+1
+            endif
+        enddo
+
+        deallocate(inds)
+        allocate(inds(nxy_new))
+        inds=inds_tmp
+
+        allocate(s_(nxy_new,refine_ints+1))
+        allocate(ct_(nxy_new,refine_ints+1))
+        allocate(p_(nxy_new,refine_ints+1))
+
+        do i=1,nxy_new
+            d=(s(inds_local(i),k_(i)+1)-s(inds_local(i),k_(i)))/refine_ints
+            s_(i,:)=s(inds_local(i),k_(i))+d*[(i, i=0,refine_ints,1)]
+            d=(ct(inds_local(i),k_(i)+1)-ct(inds_local(i),k_(i)))/refine_ints
+            ct_(i,:)=ct(inds_local(i),k_(i))+d*[(i, i=0,refine_ints,1)]
+            d=(p(inds_local(i),k_(i)+1)-p(inds_local(i),k_(i)))/refine_ints
+            p_(i,:)=p(inds_local(i),k_(i))+d*[(i, i=0,refine_ints,1)]
+        enddo
+
+        deallocate(s)
+        deallocate(ct)
+        deallocate(p)
+        allocate(s(nxy_new,refine_ints+1))
+        allocate(ct(nxy_new,refine_ints+1))
+        allocate(p(nxy_new,refine_ints+1))
+        s=s_
+        ct=ct_
+        p=p_
+
+    end subroutine root_core
+
+
     subroutine mld(s,ct,p,cut_off_choice)
 
         real(rk), dimension(:,:,:), intent(in) :: s, ct, p
@@ -369,7 +515,7 @@ contains
         real(rk) :: damp=0.0d0 ! damping parameter
         logical :: wantse=.false. ! standard error estimates
         real(rk), dimension(1) :: se=(/0.0d0/)
-        real(rk) :: atol=1.0d-7
+        real(rk) :: atol=1.0d-11
         real(rk) :: btol=0.0d0
         real(rk) :: conlim=0.0d0
         !integer :: itnlim=450 ! max. number of iterations
