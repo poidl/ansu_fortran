@@ -50,12 +50,10 @@ contains
         real(rk), dimension(nx*ny) :: sns_out, ctns_out, pns_out
         real(rk), dimension(:,:), allocatable :: s_, ct_, p_
         real(rk), dimension(nx,ny) :: rho_surf, t2
-        real(rk), dimension(nx*ny) :: pns_, t2_
-        real(rk), allocatable, dimension(:,:) :: pns_stacked, t2_stacked, &
-                        pns_stacked_old, t2_stacked_old, F
+        real(rk), dimension(:), allocatable :: pns_, t2_, pns_old,t2_old
+        real(rk), allocatable, dimension(:,:) ::  F
         integer, dimension(:), allocatable :: inds
         logical, dimension(:), allocatable :: fr
-        logical :: dobreak
 
         integer :: i,j,k, refine_ints, cnt, stack
 
@@ -73,14 +71,16 @@ contains
         enddo
 
         t2=rho_surf-drho
+        allocate(t2_(nx*ny))
         t2_=pack(t2,.true.)
+        allocate(pns_(nx*ny))
+        pns_=pack(pns,.true.)
 
         allocate(inds(nx*ny))
         inds=(/(i, i=1,nx*ny)/)
         allocate(fr(nx*ny))
         fr=.true.
 
-        pns_=pack(pns,.true.)
         refine_ints=100
 
         allocate(s_(nx*ny,nz))
@@ -90,12 +90,9 @@ contains
         ct_=reshape(ct,[nx*ny,nz])
         p_=reshape(p,[nx*ny,nz])
 
-        cnt=0
         stack=nz
-        allocate(pns_stacked(nx*ny,stack))
-        allocate(t2_stacked(nx*ny,stack))
-        pns_stacked=spread(pns_,2,stack)
-        t2_stacked=spread(t2_,2,stack)
+
+        cnt=0
         do while (.true.)
             cnt=cnt+1
 
@@ -103,45 +100,45 @@ contains
 
             do k=1,stack
                 do i=1,size(F,1)
-                    F(i,k)=gsw_rho(s_(i,k),ct_(i,k),pns_stacked(i,k)) &
-                                    -t2_stacked(i,k)
+                    F(i,k)=gsw_rho(s_(i,k),ct_(i,k),pns_(i)) &
+                                    -t2_(i)
                 enddo
             enddo
 
             deallocate(fr)
             call root_core(F,inds,refine_ints, &
-                            s_,ct_,p_,sns_out,ctns_out,pns_out,fr,dobreak)
+                            s_,ct_,p_,sns_out,ctns_out,pns_out,fr)
 
+            if (all(.not.(fr))) then
+                exit
+            endif
 
-            allocate(pns_stacked_old(size(fr),stack))
-            allocate(t2_stacked_old(size(fr),stack))
-
-            pns_stacked_old=pns_stacked
-            t2_stacked_old=t2_stacked
-
-            deallocate(pns_stacked)
-            deallocate(t2_stacked)
             stack=refine_ints+1
-            allocate(pns_stacked(count(fr),stack))
-            allocate(t2_stacked(count(fr),stack))
+
+            allocate(pns_old(size(fr)))
+            allocate(t2_old(size(fr)))
+
+            pns_old=pns_
+            t2_old=t2_
+
+            deallocate(pns_)
+            deallocate(t2_)
+            allocate(pns_(count(fr)))
+            allocate(t2_(count(fr)))
 
             j=1
             do i=1,size(fr)
                 if (fr(i)) then
-                    pns_stacked(j,:)=pns_stacked_old(i,1:stack)
-                    t2_stacked(j,:)=t2_stacked_old(i,1:stack)
+                    pns_(j)=pns_old(i)
+                    t2_(j)=t2_old(i)
                     j=j+1
                 endif
             enddo
 
-            deallocate(pns_stacked_old)
-            deallocate(t2_stacked_old)
+            deallocate(pns_old)
+            deallocate(t2_old)
 
             deallocate(F)
-
-            if (dobreak) then
-                exit
-            endif
 
         enddo
 
@@ -152,8 +149,115 @@ contains
     end subroutine dz_from_drho
 
 
+!    subroutine wetting(sns,ctns,pns,s,ct,p)
+!        real(rk), dimension(:,:), intent(inout) :: sns, ctns, pns
+!        real(rk), dimension(:,:,:), intent(in) :: s, ct, p
+!
+!        real(rk), dimension(nx*ny) :: sns_, ctns_, pns_
+!
+!        sns_=pack(sns,.true.)
+!        ctns_=pack(ctns,.true.)
+!        pns_=pack(pns,.true.)
+!
+!        !call wetting
+!
+!
+!    end subroutine wetting
+!
+!    subroutine depth_ntp_iter(s0,ct0,p0,s,ct,p,sns,ctns,pns)
+!        ! intent(inout) is necessary here because the variables are resized
+!        ! within this level (s0,...) or in root_core (s,...) ??
+!        real(rk), dimension(:), allocatable, intent(inout) :: s0, ct0, p0
+!        real(rk), dimension(:,:), allocatable, intent(inout) :: s, ct, p
+!        real(rk), dimension(:), intent(out) :: sns, ctns, pns
+!
+!        real(rk), dimension(:,:), allocatable :: s0_stacked, ct0_stacked, p0_stacked
+!        integer :: stack, nxy, refine_ints, cnt, i,j,k
+!        integer, dimension(:), allocatable :: inds
+!        logical, dimension(:), allocatable :: fr
+!        real(rk), dimension(:), allocatable :: s0_old, ct0_old, p0_old
+!        real(rk), dimension(:,:), allocatable :: F,cast,bottle
+!        call getnan(nan)
+!
+!        sns=nan
+!        ctns=nan
+!        pns=nan
+!
+!        nxy=size(s,1)
+!
+!        stack=nz
+!        refine_ints=100
+!
+!        cnt=0
+!        do while (.true.)
+!            cnt=cnt+1
+!
+!            allocate(cast(count(fr),stack))
+!            allocate(bottle(count(fr),stack))
+!            allocate(F(count(fr),stack))
+!
+!            cast=nan
+!            do k=1,nz
+!                do i=1,nxy
+!                    cast(i,k)=gsw_rho(s(i,k),ct(i,k),0.5d0*(p(i,k)+p0(i)))
+!                enddo
+!            enddo
+!
+!            do k=1,nz
+!               do i=1,nxy
+!                   bottle(i,k)=gsw_rho(s0(i),ct0(i),0.5d0*(p(i,k)+p0(i)))
+!               enddo
+!            enddo
+!
+!            F=cast-bottle
+!
+!            deallocate(fr)
+!            call root_core(F,inds,refine_ints, &
+!                            s,ct,p,sns,ctns,pns,fr)
+!
+!            if (all(.not.(fr))) then
+!                exit
+!            endif
+!
+!            stack=refine_ints+1
+!
+!            deallocate(cast)
+!            deallocate(bottle)
+!            deallocate(F)
+!
+!            allocate(s0_old(size(fr)))
+!            allocate(ct0_old(size(fr)))
+!            allocate(p0_old(size(fr)))
+!
+!            s0_old=s0
+!            ct0_old=ct0
+!            p0_old=p0
+!
+!            allocate(s0(size(fr)))
+!            allocate(ct0(size(fr)))
+!            allocate(p0(size(fr)))
+!
+!            j=1
+!            do i=1,size(fr)
+!                if (fr(i)) then
+!                    s0(j)=s0_old(i)
+!                    ct0(j)=ct0_old(i)
+!                    p0(j)=p0_old(i)
+!                    j=j+1
+!                endif
+!            enddo
+!
+!            deallocate(s0_old)
+!            deallocate(ct0_old)
+!            deallocate(p0_old)
+!
+!        enddo
+!
+!    end subroutine depth_ntp_iter
+
+
     subroutine root_core(F,inds,refine_ints, &
-                            s,ct,p,sns,ctns,pns, fr, dobreak)
+                            s,ct,p,sns,ctns,pns,fr)
 
         real(rk), allocatable, dimension(:,:), intent(in) :: F
         integer, intent(in) :: refine_ints
@@ -161,7 +265,6 @@ contains
         logical, allocatable, dimension(:), intent(out) :: fr
         real(rk), allocatable, dimension(:,:), intent(inout) :: s,ct,p
         real(rk), dimension(nx*ny), intent(inout) :: sns, ctns,pns
-        logical, intent(out) :: dobreak
 
         logical, allocatable, dimension(:,:) :: F_p, F_n, zc_F_stable
         logical, allocatable, dimension(:) :: myfinal, cond1, any_zc_F_stable
@@ -179,9 +282,6 @@ contains
         open(1,file='user_input.nml')
         read(1,root_finding)
         close(1)
-
-
-        dobreak=.false.
 
         stack=size(F,2)
         nxy=size(F,1)
@@ -241,12 +341,11 @@ contains
             endif
         enddo
 
-        deallocate(myfinal)
-
         if (all(.not.(fr))) then
-            dobreak=.true.
             return
         endif
+
+        deallocate(myfinal)
 
         nxy_new=count(fr)
 

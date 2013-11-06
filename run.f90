@@ -27,6 +27,18 @@ program run
     call delta_tilde_rho(sns,ctns,pns,drhox,drhoy)
     call ncwrite(pack(drhox,.true.),'drhox.nc','drhox',2)
     call ncwrite(pack(drhoy,.true.),'drhoy.nc','drhoy',2)
+    call find_regions(pns,regions);
+
+    call solve_lsqr(regions,drhox,drhoy,drho)
+    call ncwrite(pack(drho,.true.),'drho.nc','drho',2)
+
+    call dz_from_drho(sns, ctns, pns, s, ct, p, drho)
+    call ncwrite(pack(sns,.true.),'sns.nc','sns',2)
+
+    write(*,*) '****END****'
+
+end program run
+
 
 !    call ncwrite(pack(ey,.true.),'ey.nc','ey',2)
 
@@ -40,13 +52,6 @@ program run
     !test=reshape( (/1.0d0, nan, 1.0d0, nan, nan, nan, nan, nan, nan, 1.0d0, nan, 1.0d0/), shape = (/3,4/))
     !call find_regions(test,regions);
 
-    call find_regions(pns,regions);
-
-    call solve_lsqr(regions,drhox,drhoy,drho)
-    call ncwrite(pack(drho,.true.),'drho.nc','drho',2)
-
-    call dz_from_drho(sns, ctns, pns, s, ct, p, drho)
-    call ncwrite(pack(sns,.true.),'sns.nc','sns',2)
 !    write(*,*) 'size(regions_test): ', size(regions_test)
 !    do i=1,size(regions)
 !        write(*,*) 'size(regions(',i,'): ',size(regions(i)%points)
@@ -56,9 +61,4 @@ program run
 !    do i=1,size(regions(1)%points)
 !        write(*,*) 'regions(1)%point(', i, '): ',  int(regions(1)%points(i))
 !    enddo
-
-    write(*,*) '****END****'
-
-
-end program run
 
