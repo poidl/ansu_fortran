@@ -15,6 +15,7 @@ program run
     real(rk), dimension(nx,ny,nz) :: s, ct, p
     real(rk), dimension(nx,ny) :: sns, ctns, pns, drhox, drhoy, drho
     real(rk), dimension(nx,ny) :: cut_off_choice
+    integer :: nneighbours
 
     call getnan(nan)
 
@@ -22,8 +23,9 @@ program run
 
     call mld(s,ct,p,cut_off_choice)
 
-    call ncwrite(pack(cut_off_choice,.true.),'cut_off_choice.nc','cutoff',2)
+    call wetting(sns,ctns,pns,s,ct,p,nneighbours)
 
+    write(*,*) 'end: nneighbours: ', nneighbours
     call delta_tilde_rho(sns,ctns,pns,drhox,drhoy)
     call ncwrite(pack(drhox,.true.),'drhox.nc','drhox',2)
     call ncwrite(pack(drhoy,.true.),'drhoy.nc','drhoy',2)
@@ -34,6 +36,7 @@ program run
 
     call dz_from_drho(sns, ctns, pns, s, ct, p, drho)
     call ncwrite(pack(sns,.true.),'sns.nc','sns',2)
+
 
     write(*,*) '****END****'
 
