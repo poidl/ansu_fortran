@@ -5,10 +5,8 @@
 !
 !Translated to Fortran by S. Riha (2013)
 
-module stuff
+module definitions
     integer, parameter, public :: rk = selected_real_kind(14,30)
-    !integer, parameter, public :: NX = 3, NY = 3, NZ=101
-    integer, parameter, public :: nx = 90, ny = 43, nz=101
 
     type, public :: region_type
         integer, dimension(:), allocatable :: points
@@ -26,4 +24,4 @@ contains
         nan=0d0/setnan
     end subroutine getnan
 
-end module stuff
+end module definitions

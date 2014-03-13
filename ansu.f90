@@ -5,15 +5,16 @@
 !
 !Translated to Fortran by S. Riha (2013)
 
-module ans
-    use stuff
+module ansu
+    use definitions
+    use grid_params
     use lsqrModule, only : LSQR
-    use ncutils
+!    use ncutils
     implicit none
 
 !=============================================================
-    public :: mld, delta_tilde_rho, find_regions, solve_lsqr, &
-                    dz_from_drho, wetting
+    public :: optimize_surface, mld, delta_tilde_rho, find_regions, &
+               solve_lsqr, dz_from_drho, wetting
 
 !=============================================================
     private
@@ -43,6 +44,25 @@ module ans
 
 
 contains
+
+    subroutine optimize_surface(sns,ctns,pns,s,ct,p)
+
+        real(rk), dimension(:,:), intent(inout) :: sns, ctns, pns
+        real(rk), dimension(:,:,:), intent(in) :: s, ct, p
+        type(region_type), dimension(:), allocatable :: regions
+        real(rk), dimension(nx,ny) :: cut_off_choice, drhox, drhoy, drho
+        integer :: nneighbours
+
+        call mld(s,ct,p,cut_off_choice)
+        call wetting(sns,ctns,pns,s,ct,p,nneighbours)
+        call delta_tilde_rho(sns,ctns,pns,drhox,drhoy)
+        call find_regions(pns,regions);
+        call solve_lsqr(regions,drhox,drhoy,drho)
+        call dz_from_drho(sns, ctns, pns, s, ct, p, drho)
+
+    end subroutine optimize_surface
+
+
     subroutine dz_from_drho(sns, ctns, pns, s, ct, p, drho)
         real(rk), dimension(:,:), intent(inout) :: sns, ctns, pns
         real(rk), dimension(:,:,:), intent(in) :: s, ct, p
@@ -370,14 +390,14 @@ contains
         s0_=s0
         ct0_=ct0
         p0_=p0
-         call ncwrite(s0_,'s0_.nc','fort',1)
+!         call ncwrite(s0_,'s0_.nc','fort',1)
         allocate(s_(nxy,nz))
         allocate(ct_(nxy,nz))
         allocate(p_(nxy,nz))
         s_=s
         ct_=ct
         p_=p
-        call ncwrite_new(s_,'s_.nc','fort')
+!        call ncwrite_new(s_,'s_.nc','fort')
 
         allocate(inds(nxy))
         inds=(/(i, i=1,nxy)/)
@@ -792,9 +812,9 @@ contains
         !condition
         y(size(y))=0.0d0
 
-        call ncwrite(pack(dble(j1),.true.),'j1.nc','j1',1)
-        call ncwrite(pack(dble(j2),.true.),'j2.nc','j2',1)
-        call ncwrite(pack(y,.true.),'y.nc','y',1)
+!        call ncwrite(pack(dble(j1),.true.),'j1.nc','j1',1)
+!        call ncwrite(pack(dble(j2),.true.),'j2.nc','j2',1)
+!        call ncwrite(pack(y,.true.),'y.nc','y',1)
 
     end subroutine lsqr_Ay
 
@@ -851,7 +871,7 @@ contains
         write(*,*) 'Arnorm/(Anorm*rnorm): ', Arnorm/(Anorm*rnorm)
 
         drho_(:)=nan
-        call ncwrite(pack(drho_,.true.),'drho_.nc','drho_',2)
+!        call ncwrite(pack(drho_,.true.),'drho_.nc','drho_',2)
         do i=1,size(regions(1)%points)
             drho_(regions(1)%points(i))= x(i)
         enddo
@@ -1160,4 +1180,4 @@ contains
 !
 !    end subroutine epsilon_
 
-end module ans
+end module ansu

@@ -7,36 +7,19 @@
 
 program run
     use ncutils
-    use ans
+    use ansu
     implicit none
 
-    type(region_type), dimension(:), allocatable :: regions
 
     real(rk), dimension(nx,ny,nz) :: s, ct, p
-    real(rk), dimension(nx,ny) :: sns, ctns, pns, drhox, drhoy, drho
-    real(rk), dimension(nx,ny) :: cut_off_choice
-    integer :: nneighbours
+    real(rk), dimension(nx,ny) :: sns, ctns, pns
 
-    call getnan(nan)
 
     call ncread(sns,ctns,pns,s,ct,p)
 
-    call mld(s,ct,p,cut_off_choice)
+    call optimize_surface(sns,ctns,pns,s,ct,p)
 
-    call wetting(sns,ctns,pns,s,ct,p,nneighbours)
-
-    write(*,*) 'end: nneighbours: ', nneighbours
-    call delta_tilde_rho(sns,ctns,pns,drhox,drhoy)
-    call ncwrite(pack(drhox,.true.),'drhox.nc','drhox',2)
-    call ncwrite(pack(drhoy,.true.),'drhoy.nc','drhoy',2)
-    call find_regions(pns,regions);
-
-    call solve_lsqr(regions,drhox,drhoy,drho)
-    call ncwrite(pack(drho,.true.),'drho.nc','drho',2)
-
-    call dz_from_drho(sns, ctns, pns, s, ct, p, drho)
     call ncwrite(pack(sns,.true.),'sns.nc','sns',2)
-
 
     write(*,*) '****END****'
 

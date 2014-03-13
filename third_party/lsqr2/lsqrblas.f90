@@ -34,9 +34,9 @@
 !    LC: QA214.L56.
 !
 !    Charles Lawson, Richard Hanson, David Kincaid, Fred Krogh,
-!    Algorithm 539, 
+!    Algorithm 539,
 !    Basic Linear Algebra Subprograms for Fortran Usage,
-!    ACM Transactions on Mathematical Software, 
+!    ACM Transactions on Mathematical Software,
 !    Volume 5, Number 3, September 1979, pages 308-323.
 !
 !  Parameters:
@@ -51,7 +51,7 @@
 !
 !    Input, integer INCY, the increment between successive entries in DY.
 !
-!    Output, real ( kind = 8 ) DDOT, the sum of the product of the 
+!    Output, real ( kind = 8 ) DDOT, the sum of the product of the
 !    corresponding entries of DX and DY.
 
 
@@ -139,7 +139,7 @@ end function ddot
 !    LC: QA214.L56.
 !
 !    Charles Lawson, Richard Hanson, David Kincaid, Fred Krogh,
-!    Algorithm 539, 
+!    Algorithm 539,
 !    Basic Linear Algebra Subprograms for Fortran Usage,
 !    ACM Transactions on Mathematical Software,
 !    Volume 5, Number 3, September 1979, pages 308-323.
@@ -212,7 +212,7 @@ end function dnrm2
 !    LC: QA214.L56.
 !
 !    Charles Lawson, Richard Hanson, David Kincaid, Fred Krogh,
-!    Algorithm 539, 
+!    Algorithm 539,
 !    Basic Linear Algebra Subprograms for Fortran Usage,
 !    ACM Transactions on Mathematical Software,
 !    Volume 5, Number 3, September 1979, pages 308-323.

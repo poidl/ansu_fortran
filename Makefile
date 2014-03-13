@@ -7,13 +7,13 @@ FLAGS= -g -O
 #FLAGS= -O3
 #FLAGS= -pg
 
-# LLFLAGS: options preceeding "-Wl' are for linking at compile time, 
-# succeeding ones are for linking at load time (or runtime?). In the 
-# case where
-# a netcdf library is installed in a default location, but I want
+# Note on LLFLAGS: options preceeding "-Wl' are for linking at compile time, 
+# succeeding ones are for linking at load time (or runtime). In 
+# case a netcdf library is installed in a default location, but I want
 # to use one located in my home directory, then omitting the succeeding
-# ones will cause the program to call the default library (check with ldd).
-# This is surprisingly tricky...am I missing something?
+# options will cause the program TO COMPILE AGAINST against the library 
+# in my home dir, but to call the default library AT RUN TIME (check with ldd).
+
 LLFLAGS = -L$(NCDIR)/lib -lnetcdff -Wl,-rpath,$(NCDIR)/lib
 INCFLAGS = -I$(NCDIR)/include -I$(LSQRDIR)
 
@@ -25,24 +25,25 @@ $(LSQRDIR)/%.o : $(LSQRDIR)/%.f90 ; ${FORT} ${FLAGS} -c -o $@ $< -J $(LSQRDIR)
 lsqrdeps= $(LSQRDIR)/lsqrDataModule.o $(LSQRDIR)/lsqrblas.o \
 $(LSQRDIR)/lsqrblasInterface.o 
 
-files = $(lsqrdeps) $(LSQRDIR)/lsqrModule.o  stuff.o  ncutils.o ans.o run.o
+files = $(lsqrdeps) $(LSQRDIR)/lsqrModule.o  grid_params.o definitions.o  ncutils.o ansu.o run.o
 
 
-run_exe: run.o $(files)
+run: run.o $(files)
 	$(FORT) $(FLAGS) -o $@  $(files) \
 	$(GSWDIR)/gsw_oceanographic_toolbox.o $(LLFLAGS)
 
 
 $(LSQRDIR)/lsqrModule.o: $(lsqrdeps)
 
-ans.o: stuff.o ncutils.o $(LSQRDIR)/lsqrModule.o
+ansu.o: definitions.o grid_params.o ncutils.o $(LSQRDIR)/lsqrModule.o
 
-ncutils.o: stuff.o
+ncutils.o: definitions.o grid_params.o
 
-run.o:  ncutils.o ans.o 
+run.o:  ncutils.o ansu.o 
 
 clean:
 	rm -f *.o *.mod
 	rm -f $(LSQRDIR)/*.o $(LSQRDIR)/*.mod
-	rm run_exe
+	rm run
+	rm *nc
 	

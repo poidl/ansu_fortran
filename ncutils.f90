@@ -6,7 +6,8 @@
 !Translated to Fortran by S. Riha (2013)
 
 module ncutils
-    use stuff
+    use definitions
+    use grid_params
     use netcdf
     implicit none
     public ncwrite
