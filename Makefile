@@ -35,7 +35,7 @@ run: run.o $(files)
 
 $(LSQRDIR)/lsqrModule.o: $(lsqrdeps)
 
-ansu.o: definitions.o grid_params.o ncutils.o $(LSQRDIR)/lsqrModule.o
+ansu.o: definitions.o ncutils.o $(LSQRDIR)/lsqrModule.o
 
 ncutils.o: definitions.o grid_params.o
 

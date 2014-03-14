@@ -1,23 +1,22 @@
-!This is part of the analyze_surface toolbox, (C) 2009 A. Klocker
-!Partially modified by P. Barker (2010-13)
-!Partially modified by S. Riha (2013)
-!Principal investigator: Trevor McDougall
-!
-!Translated to Fortran by S. Riha (2013)
+! Main program. Reads initial surface and 3-d data set from netcdf
+! file, and calculates NIT iterations.
 
 program run
     use ncutils
     use ansu
     implicit none
 
-
     real(rk), dimension(nx,ny,nz) :: s, ct, p
     real(rk), dimension(nx,ny) :: sns, ctns, pns
+    integer :: it, nit
 
+    nit=1
 
     call ncread(sns,ctns,pns,s,ct,p)
 
-    call optimize_surface(sns,ctns,pns,s,ct,p)
+    do it=1,nit
+        call optimize_surface(sns,ctns,pns,s,ct,p)
+    enddo
 
     call ncwrite(pack(sns,.true.),'sns.nc','sns',2)
 

@@ -7,7 +7,6 @@
 
 module ansu
     use definitions
-    use grid_params
     use lsqrModule, only : LSQR
 !    use ncutils
     implicit none
@@ -50,11 +49,19 @@ contains
         real(rk), dimension(:,:), intent(inout) :: sns, ctns, pns
         real(rk), dimension(:,:,:), intent(in) :: s, ct, p
         type(region_type), dimension(:), allocatable :: regions
-        real(rk), dimension(nx,ny) :: cut_off_choice, drhox, drhoy, drho
-        integer :: nneighbours
+        real(rk), dimension(:,:), allocatable :: cut_off_choice, drhox, drhoy, drho
+        integer :: nneighbours, nxy, nx, ny
+
+        nx=size(s,1)
+        ny=size(s,2)
+        nxy=nx*ny
+        allocate(cut_off_choice(nx,ny))
+        allocate(drhox(nx,ny))
+        allocate(drhoy(nx,ny))
+        allocate(drho(nx,ny))
 
         ! disregard data above mixed layer depth
-        !call mld(s,ct,p,cut_off_choice)
+        call mld(s,ct,p,cut_off_choice)
 
         ! lateral extension of outcropping/undercropping surface
         call wetting(sns,ctns,pns,s,ct,p,nneighbours)
@@ -78,12 +85,13 @@ contains
         real(rk), dimension(:,:), intent(inout) :: sns, ctns, pns
         real(rk), dimension(:,:,:), intent(in) :: s, ct, p
         real(rk), dimension(:,:), intent(in) :: drho
-        !real(rk), dimension(nx*ny,nz) :: s_, ct_, p_
-        !real(rk), dimension(nx*ny) :: s0, ct0, p0, drho0, sns_,ctns_,pns_
         real(rk), dimension(:,:), allocatable :: s_, ct_, p_
         real(rk), dimension(:), allocatable :: s0, ct0, p0, drho0, sns_,ctns_,pns_
-        integer :: nxy
+        integer :: nxy, nx, ny, nz
 
+        nx=size(s,1)
+        ny=size(s,2)
+        nz=size(s,3)
         nxy=nx*ny
 
         allocate(s_(nxy,nz))
@@ -122,23 +130,16 @@ contains
         real(rk), dimension(:,:,:), intent(in) :: s, ct, p
         integer, intent(out) :: nneighbours
 
-        real(rk), dimension(nx*ny) :: sns_, ctns_, pns_, s1
-        real(rk), dimension(nx*ny,nz) :: s_, ct_, p_
+        real(rk), dimension(:), allocatable :: sns_, ctns_, pns_, s1
+        real(rk), dimension(:,:), allocatable :: s_, ct_, p_
         real(rk), dimension(:), allocatable :: sns_new, ctns_new, pns_new
-        logical, dimension(nx*ny) :: wet, wets, nn, sn, en, wn, nbr
-        integer, dimension(nx*ny) :: inds, inds_nbr
-        integer, dimension(nx) :: inb, isb
-        integer, dimension(ny) :: ieb, iwb
-        integer :: i
+        logical, dimension(:), allocatable :: wet, wets, nn, sn, en, wn, nbr
+        integer, dimension(:), allocatable :: inds, inds_nbr
+        integer, dimension(:), allocatable :: inb, isb
+        integer, dimension(:), allocatable :: ieb, iwb
         integer, dimension(:), allocatable :: inbr, iwo
+        integer :: i, nxy, nx, ny, nz
         logical :: zonally_periodic
-        !!! debug
-        real(rk), dimension(:), allocatable :: snstmp,ctnstmp,pnstmp
-        real(rk), dimension(:,:), allocatable :: stmp,cttmp,ptmp
-        real(rk), dimension(nx,ny) :: ma
-        real(rk), dimension(4) :: test=[1,2,3,4]
-        real(rk), dimension(2) :: jj=[0,0]
-        !!! debug
 
         namelist /domain/ zonally_periodic
 
@@ -146,13 +147,40 @@ contains
         read(1,domain)
         close(1)
 
+        nx=size(s,1)
+        ny=size(s,2)
+        nz=size(s,3)
+        nxy=nx*ny
+
+        allocate(sns_(nxy))
+        allocate(ctns_(nxy))
+        allocate(pns_(nxy))
+        allocate(s1(nxy))
+
+        allocate(s_(nxy,nz))
+        allocate(ct_(nxy,nz))
+        allocate(p_(nxy,nz))
+
+        allocate(wet(nxy))
+        allocate(wets(nxy))
+        allocate(nn(nxy))
+        allocate(sn(nxy))
+        allocate(en(nxy))
+        allocate(wn(nxy))
+        allocate(nbr(nxy))
+
+        allocate(inb(nx))
+        allocate(isb(nx))
+        allocate(ieb(ny))
+        allocate(iwb(ny))
+
         sns_=pack(sns,.true.)
         ctns_=pack(ctns,.true.)
         pns_=pack(pns,.true.)
 
-        s_=reshape(s,[nx*ny,nz])
-        ct_=reshape(ct,[nx*ny,nz])
-        p_=reshape(p,[nx*ny,nz])
+        s_=reshape(s,[nxy,nz])
+        ct_=reshape(ct,[nxy,nz])
+        p_=reshape(p,[nxy,nz])
 
         s1=pack(s(:,:,1),.true.)
 
@@ -161,7 +189,7 @@ contains
 
         inb=[(i, i= (ny-1)*nx+1, ny*nx)] ! indices of northern boundary
         isb=[(i, i= 1, nx)]
-        ieb=[(i, i= nx, nx*ny, nx)]
+        ieb=[(i, i= nx, nxy, nx)]
         iwb=[(i, i= 1, (ny-1)*nx+1, nx)]
 
         nn=(wet).and.(cshift(wets,nx)) ! wet points with northern neighbour on ans
@@ -185,7 +213,7 @@ contains
         sn= (sn) .and. (.not.(nn)) .and. (.not.(wn)) .and. (.not.(en))
 
         ! expand in western direction
-        inds=[(i,i=1,nx*ny)]
+        inds=[(i,i=1,nxy)]
         inds_nbr=inds+1
         inds_nbr(ieb)=iwb
 
@@ -212,7 +240,7 @@ contains
 
 
         ! expand in eastern direction
-        inds=[(i,i=1,nx*ny)]
+        inds=[(i,i=1,nxy)]
         inds_nbr=inds-1
         inds_nbr(iwb)=ieb
 
@@ -239,7 +267,7 @@ contains
 
 
         ! expand in southern direction
-        inds=[(i,i=1,nx*ny)]
+        inds=[(i,i=1,nxy)]
         inds_nbr=inds+nx
         inds_nbr(inb)=isb
 
@@ -265,7 +293,7 @@ contains
         deallocate(pns_new)
 
         ! expand in northern direction
-        inds=[(i,i=1,nx*ny)]
+        inds=[(i,i=1,nxy)]
         inds_nbr=inds-nx
         inds_nbr(isb)=inb
 
@@ -321,7 +349,7 @@ contains
         real(rk), dimension(:), allocatable :: s0_, ct0_, p0_
         real(rk), dimension(:,:), allocatable :: s_, ct_, p_
         real(rk), dimension(:,:), allocatable :: s0_stacked, ct0_stacked, p0_stacked
-        integer :: stack, nxy, refine_ints, cnt, i,j,k
+        integer :: stack, nxy, nz, refine_ints, cnt, i,j,k
         integer, dimension(:), allocatable :: inds
         logical, dimension(:), allocatable :: fr
         real(rk), dimension(:), allocatable :: s0_old, ct0_old, p0_old
@@ -331,6 +359,7 @@ contains
         call getnan(nan)
 
         nxy=size(s,1)
+        nz=size(s,2)
 
         allocate(s0_(nxy))
         allocate(ct0_(nxy))
@@ -435,7 +464,7 @@ contains
         real(rk), dimension(:), allocatable :: s0_, ct0_, p0_, drho_
         real(rk), dimension(:,:), allocatable :: s_, ct_, p_
         real(rk), dimension(:,:), allocatable :: s0_stacked, ct0_stacked, p0_stacked
-        integer :: stack, nxy, refine_ints, cnt, i,j,k
+        integer :: stack, nxy, nz, refine_ints, cnt, i,j,k
         integer, dimension(:), allocatable :: inds
         logical, dimension(:), allocatable :: fr
         real(rk), dimension(:), allocatable :: s0_old, ct0_old, p0_old, drho_old
@@ -445,6 +474,7 @@ contains
         call getnan(nan)
 
         nxy=size(s,1)
+        nz=size(s,2)
 
         allocate(s0_(nxy))
         allocate(ct0_(nxy))
@@ -688,15 +718,30 @@ contains
         real(rk), dimension(:,:,:), intent(in) :: s, ct, p
         real(rk), dimension(:,:), intent(out) :: cut_off_choice
 
-        real(rk), dimension(nx*ny,nz) :: rho, surf_dens_, thresh
-        real(rk), dimension(nx*ny*nz) :: pflat
-        real(rk), dimension(nx*ny) :: surf_dens, p_, cut_off_choice_
-        logical, dimension(nx*ny,nz) :: pos
-        integer, dimension(nx*ny) :: ip
-        integer, dimension(4) :: C3
-        integer :: nxy, i, j, k
+        real(rk), dimension(:,:), allocatable :: rho, surf_dens_, thresh
+        real(rk), dimension(:), allocatable :: pflat
 
+        real(rk), dimension(:), allocatable :: surf_dens, p_, cut_off_choice_
+        logical, dimension(:,:), allocatable :: pos
+        integer, dimension(:), allocatable :: ip
+        integer, dimension(4) :: C3
+        integer :: i, j, k, nxy, nx, ny, nz
+
+        nx=size(s,1)
+        ny=size(s,2)
+        nz=size(s,3)
         nxy=nx*ny
+
+        allocate(rho(nx*ny,nz))
+        allocate(surf_dens_(nx*ny,nz))
+        allocate(thresh(nx*ny,nz))
+        allocate(pflat(nx*ny*nz))
+
+        allocate(surf_dens(nx*ny))
+        allocate(p_(nx*ny))
+        allocate(cut_off_choice_(nx*ny))
+        allocate(pos(nx*ny,nz))
+        allocate(ip(nx*ny))
 
         do k=1,nz
             do j=1,ny
@@ -730,10 +775,9 @@ contains
 
         real(rk), dimension(:,:), intent(in) :: sns, ctns, pns
         real(rk), dimension(:,:), intent(out) :: drhox,drhoy
-        real(rk), dimension(nx, ny) :: gradx_s, grady_s, gradx_ct, grady_ct
-        real(rk), dimension(nx,ny) :: r1, r2, sns_, ctns_, pmid
-        real(rk), dimension(nx,ny) :: debug
-        integer :: i, j, nxy
+        real(rk), dimension(:,:), allocatable :: gradx_s, grady_s, gradx_ct, grady_ct
+        real(rk), dimension(:,:), allocatable :: r1, r2, sns_, ctns_, pmid
+        integer :: i, j, nxy, nx, ny
         logical :: zonally_periodic
 
         namelist /domain/ zonally_periodic
@@ -741,6 +785,19 @@ contains
         open(1,file='user_input.nml')
         read(1,domain)
         close(1)
+
+        nx=size(sns,1)
+        ny=size(sns,2)
+
+        allocate(gradx_s(nx,ny))
+        allocate(grady_s(nx,ny))
+        allocate(gradx_ct(nx,ny))
+        allocate(grady_ct(nx,ny))
+        allocate(r1(nx,ny))
+        allocate(r2(nx,ny))
+        allocate(sns_(nx,ny))
+        allocate(ctns_(nx,ny))
+        allocate(pmid(nx,ny))
 
         call getnan(nan)
 
@@ -793,11 +850,12 @@ contains
     subroutine lsqr_Ay(regions,drhox,drhoy)
         type(region_type), dimension(:), allocatable, intent(in) :: regions
         real(rk), dimension(:,:), intent(in) :: drhox,drhoy
-        real(rk),  dimension(nx*ny) :: drhox_, drhoy_
-        logical, dimension(nx*ny) :: reg, en, nn
-        integer, dimension(nx*ny) :: sreg, sreg_en, sreg_nn
+
+        real(rk),  dimension(:), allocatable :: drhox_, drhoy_
+        logical, dimension(:), allocatable :: reg, en, nn
+        integer, dimension(:), allocatable :: sreg, sreg_en, sreg_nn
         integer, allocatable, dimension(:) :: region, j1_ew, j2_ew, j1_ns, j2_ns
-        integer :: i, j
+        integer :: i, j, nxy, nx, ny
         logical :: zonally_periodic
         integer, allocatable, dimension(:) :: pts
 
@@ -808,6 +866,19 @@ contains
         close(1)
 
         call getnan(nan)
+
+        nx=size(drhox,1)
+        ny=size(drhox,2)
+        nxy=nx*ny
+
+        allocate(drhox_(nxy))
+        allocate(drhoy_(nxy))
+        allocate(reg(nxy))
+        allocate(en(nxy))
+        allocate(nn(nxy))
+        allocate(sreg(nxy))
+        allocate(sreg_en(nxy))
+        allocate(sreg_nn(nxy))
 
         drhox_=pack(drhox,.true.)
         drhoy_=pack(drhoy,.true.)
@@ -892,11 +963,12 @@ contains
     subroutine solve_lsqr(regions,drhox,drhoy,drho)
         type(region_type), dimension(:), allocatable, intent(in) :: regions
         real(rk), dimension(:,:), intent(in) :: drhox,drhoy
-        real(rk),  dimension(nx,ny), intent(out) :: drho
-        real(rk),  dimension(nx*ny) :: drho_
+        real(rk),  dimension(:,:), allocatable, intent(out) :: drho
+
+        real(rk),  dimension(:), allocatable :: drho_
         integer, allocatable, dimension(:) :: j1, j2
         real(rk), allocatable, dimension(:) :: x,b
-        integer :: i, j
+        integer :: i, j, nx, ny
         logical :: zonally_periodic
         namelist /domain/ zonally_periodic
 
@@ -939,6 +1011,12 @@ contains
         write(*,*) 'istop: ',istop
         write(*,*) 'rnorm: ',rnorm
         write(*,*) 'Arnorm/(Anorm*rnorm): ', Arnorm/(Anorm*rnorm)
+
+        nx=size(drhox,1)
+        ny=size(drhox,2)
+
+        allocate(drho_(nx*ny))
+        allocate(drho(nx,ny))
 
         drho_(:)=nan
 !        call ncwrite(pack(drho_,.true.),'drho_.nc','drho_',2)
@@ -987,40 +1065,40 @@ contains
     end subroutine Aprod2
 
 
-    subroutine grad_surf(f,e1t,e2t,fx,fy)
-
-        real(rk),  dimension(:,:), intent(in) :: f, e1t, e2t
-        real(rk),  dimension(:,:), intent(out) :: fx, fy
-        logical :: zonally_periodic
-
-        namelist /domain/ zonally_periodic
-
-        open(1,file='user_input.nml')
-        read(1,domain)
-        close(1)
-
-        fx=(cshift(f,1,1)-f)/e1t
-
-        call getnan(nan)
-
-        if (.not.(zonally_periodic)) then
-            fx(nx,:)=nan
-        endif
-
-        fy=(cshift(f,1,2)-f)/e2t
-
-    end subroutine grad_surf
+!    subroutine grad_surf(f,e1t,e2t,fx,fy)
+!
+!        real(rk),  dimension(:,:), intent(in) :: f, e1t, e2t
+!        real(rk),  dimension(:,:), intent(out) :: fx, fy
+!        logical :: zonally_periodic
+!
+!        namelist /domain/ zonally_periodic
+!
+!        open(1,file='user_input.nml')
+!        read(1,domain)
+!        close(1)
+!
+!        fx=(cshift(f,1,1)-f)/e1t
+!
+!        call getnan(nan)
+!
+!        if (.not.(zonally_periodic)) then
+!            fx(nx,:)=nan
+!        endif
+!
+!        fy=(cshift(f,1,2)-f)/e2t
+!
+!    end subroutine grad_surf
 
 
     subroutine find_regions(pns,regions)
 
         type(region_type), dimension(:), allocatable, intent(out) :: regions
         real(rk),  dimension(:,:), intent(in) :: pns
-        logical,  dimension(nx,ny) :: wet
-        logical,  dimension(nx*ny) :: bool, wet_
-        integer,  dimension(nx*ny) :: L_
-        integer, dimension(ny) :: east, west
-        integer :: k, i, j, ii, iregion,kk,kkk
+        logical,  dimension(:,:), allocatable :: wet
+        logical,  dimension(:), allocatable :: bool, wet_
+        integer,  dimension(:), allocatable :: L_
+        integer, dimension(:), allocatable :: east, west
+        integer :: k, i, j, ii, iregion, nxy, nx, ny
         integer, allocatable, dimension(:) :: idx, neighbours, neighbours_tmp
         logical :: zonally_periodic
 
@@ -1029,6 +1107,17 @@ contains
         open(1,file='user_input.nml')
         read(1,domain)
         close(1)
+
+        nx=size(pns,1)
+        ny=size(pns,2)
+        nxy=nx*ny
+
+        allocate(wet(nx,ny))
+        allocate(bool(nxy))
+        allocate(wet_(nxy))
+        allocate(L_(nxy))
+        allocate(east(ny))
+        allocate(west(ny))
 
         wet=.not.(isnan(pns))
         wet_=pack(wet,.true.)
@@ -1198,7 +1287,7 @@ contains
 !        real(rk), dimension(nx, ny) :: gradx_s, grady_s, gradx_ct, grady_ct
 !        real(rk), dimension(nx,ny) :: alpha, beta, alphax, alphay, betax, betay
 !        real(rk), dimension(nx,ny) :: debug
-!        integer :: i, j, nxy, setnan
+!        integer :: i, j, hoitmyxy, setnan
 !        real(rk) :: nan
 !        logical :: zonally_periodic
 !
