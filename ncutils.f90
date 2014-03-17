@@ -1,102 +1,17 @@
-! Quick and dirty hack to write stuff to nc files for debugging.
-! Do not use this.
+! Quick hack to read/write stuff from/to nc files.
+! For debugging only.
 
 module ncutils
-    use definitions
-    use grid_params
+    use definitions ! real kind
     use netcdf
+
     implicit none
+
     public ncwrite
     public ncread
     private check
 
 contains
-
-    subroutine ncwrite(va,fname,vname,mode)
-        real(rk), dimension(:), intent(in) :: va
-        character (len = *), intent(in) :: fname
-        character (len = *), intent(in) :: vname
-        !real(rk), dimension(:,:) :: va2
-        integer, intent(in) :: mode
-        integer :: ncid, varid, x_dimid, y_dimid, z_dimid
-        integer, dimension(1) :: dimids1
-        integer, dimension(2) :: dimids2
-        integer, dimension(3) :: dimids3
-        real(rk) :: zero, fillval
-
-        call check( nf90_create(fname,ior(nf90_netcdf4, nf90_classic_model),ncid))
-
-        if (mode==1) then
-            call check( nf90_def_dim(ncid,"x",size(va),x_dimid))
-            dimids1 =  (/ x_dimid /)
-            call check( nf90_def_var(ncid,vname,NF90_DOUBLE,dimids1,varid))
-            call check( nf90_enddef(ncid) )
-
-            call check( nf90_put_var(ncid,varid,va))
-
-        else if (mode==2) then
-
-            call check( nf90_def_dim(ncid,"y",NY,y_dimid))
-            call check( nf90_def_dim(ncid,"x",NX,x_dimid))
-            dimids2 =  [x_dimid, y_dimid]
-            call check( nf90_def_var(ncid,vname,NF90_DOUBLE,dimids2,varid))
-            zero=0.0d0
-            fillval = zero/ zero
-            !call check( nf90_put_att(ncid, varid, "_FillValue", fillval) )
-            call check( nf90_enddef(ncid) )
-
-            call check( nf90_put_var(ncid,varid,reshape(va,[NX,NY])))
-
-        else if (mode==3) then
-
-            call check( nf90_def_dim(ncid,"z",NZ,z_dimid))
-            call check( nf90_def_dim(ncid,"y",NY,y_dimid))
-            call check( nf90_def_dim(ncid,"x",NX,x_dimid))
-            dimids3 =  [x_dimid, y_dimid, z_dimid]
-            call check( nf90_def_var(ncid,vname,NF90_DOUBLE,dimids3,varid))
-            call check( nf90_enddef(ncid) )
-            call check( nf90_put_var(ncid,varid,reshape(va,[NX,NY,NZ])))
-
-
-        endif
-
-        call check( nf90_close(ncid) )
-
-    end subroutine ncwrite
-
-
-    subroutine ncwrite_new(va,fname,vname)
-        real(rk), dimension(:,:), intent(in) :: va
-        character (len = *), intent(in) :: fname
-        character (len = *), intent(in) :: vname
-        !real(rk), dimension(:,:) :: va2
-        !integer, intent(in) :: mode
-        integer :: ncid, varid, x_dimid, y_dimid, z_dimid
-        integer, dimension(1) :: dimids1
-        integer, dimension(2) :: dimids
-        integer, dimension(3) :: dimids3
-        integer :: n1,n2
-        real(rk) :: zero, fillval
-
-        n1=size(va,1)
-        n2=size(va,2)
-        !n3=size(va,3)
-
-        call check( nf90_create(fname,ior(nf90_netcdf4, nf90_classic_model),ncid))
-
-
-        !call check( nf90_def_dim(ncid,"z",n3,z_dimid))
-        call check( nf90_def_dim(ncid,"y",n2,y_dimid))
-        call check( nf90_def_dim(ncid,"x",n1,x_dimid))
-        dimids =  [x_dimid, y_dimid]
-        call check( nf90_def_var(ncid,vname,NF90_DOUBLE,dimids,varid))
-        call check( nf90_enddef(ncid) )
-        call check( nf90_put_var(ncid,varid,reshape(va,[n1,n2])))
-
-
-        call check( nf90_close(ncid) )
-
-    end subroutine ncwrite_new
 
     subroutine ncread(sns,ctns,pns,s,ct,p)
 
@@ -127,6 +42,60 @@ contains
         call check( nf90_close(ncid) )
 
     end subroutine ncread
+
+
+    subroutine ncwrite(va,myshape,fname,vname)
+        real(rk), dimension(:), intent(in) :: va
+        character (len = *), intent(in) :: fname
+        character (len = *), intent(in) :: vname
+        integer, dimension(:), intent(in) :: myshape
+        integer :: ndims, ncid, varid, x_dimid, y_dimid, z_dimid
+        integer, dimension(:), allocatable :: dimids
+        integer :: n1,n2,n3
+        real(rk) :: zero, fillval
+
+        ndims=size(myshape)
+        !write(*,*) 'ndims: ', ndims
+
+
+        allocate(dimids(ndims))
+
+        call check( nf90_create(fname,ior(nf90_netcdf4, nf90_classic_model),ncid))
+
+        n1=myshape(1)
+        call check( nf90_def_dim(ncid,"x",n1,x_dimid))
+
+        if (ndims.eq.1) then
+            dimids =  [x_dimid]
+        endif
+        if (ndims.gt.1) then
+            n2=myshape(2)
+            call check( nf90_def_dim(ncid,"y",n2,y_dimid))
+            if (ndims.eq.2) then
+                dimids =  [x_dimid, y_dimid]
+            endif
+            if (ndims.eq.3) then
+                n3=myshape(3)
+                call check( nf90_def_dim(ncid,"z",n3,z_dimid))
+                dimids =  [x_dimid, y_dimid, z_dimid]
+            endif
+        endif
+
+        call check( nf90_def_var(ncid,vname,NF90_DOUBLE,dimids,varid))
+        call check( nf90_enddef(ncid) )
+
+
+        if (ndims.eq.1) then
+            call check( nf90_put_var(ncid,varid,va))
+        else if (ndims.eq.2) then
+            call check( nf90_put_var(ncid,varid,reshape(va,[n1,n2])))
+        else if (ndims.eq.3) then
+            call check( nf90_put_var(ncid,varid,reshape(va,[n1,n2,n3])))
+        endif
+
+        call check( nf90_close(ncid) )
+
+    end subroutine ncwrite
 
 
     subroutine check(status)

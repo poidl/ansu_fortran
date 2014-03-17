@@ -6,19 +6,38 @@ program run
     use ansu
     implicit none
 
+    integer, parameter :: nx = 90, ny = 43, nz=101
+
     real(rk), dimension(nx,ny,nz) :: s, ct, p
     real(rk), dimension(nx,ny) :: sns, ctns, pns
     integer :: it, nit
 
-    nit=1
+    nit=15
 
     call ncread(sns,ctns,pns,s,ct,p)
 
+    call ncwrite(pack(pns,.true.),shape(pns),'pns0.nc','pns')
+
     do it=1,nit
+
+        write(*,*) 'Iteration', it
+
         call optimize_surface(sns,ctns,pns,s,ct,p)
+
+        if (it.eq.1) then
+            call ncwrite(pack(pns,.true.),shape(pns),'pns1.nc','pns')
+        else if (it.eq.2) then
+            call ncwrite(pack(pns,.true.),shape(pns),'pns2.nc','pns')
+        else if (it.eq.3) then
+            call ncwrite(pack(pns,.true.),shape(pns),'pns3.nc','pns')
+        endif
     enddo
 
-    call ncwrite(pack(sns,.true.),'sns.nc','sns',2)
+
+!    call ncwrite(pack(sns,.true.),shape(sns),'sns.nc','sns')
+!    call ncwrite(pack(ctns,.true.),shape(ctns),'ctns.nc','ctns')
+!    call ncwrite(pack(pns,.true.),shape(pns),'pns.nc','pns')
+
 
     write(*,*) '****END****'
 

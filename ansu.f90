@@ -1,9 +1,9 @@
 !This is part of the analyze_surface toolbox, (C) 2009 A. Klocker
-!Partially modified by P. Barker (2010-13)
-!Partially modified by S. Riha (2013)
+!Modified by P. Barker (2010-2013)
+!Modified by S. Riha (2013-2014)
 !Principal investigator: Trevor McDougall
 !
-!Translated to Fortran by S. Riha (2013)
+!Translated to Fortran by S. Riha (2013-2014)
 
 module ansu
     use definitions
@@ -65,6 +65,7 @@ contains
 
         ! lateral extension of outcropping/undercropping surface
         call wetting(sns,ctns,pns,s,ct,p,nneighbours)
+        write(*,*) 'Wetting...number of added points: ', nneighbours
 
         ! compute lateral gradient
         call delta_tilde_rho(sns,ctns,pns,drhox,drhoy)
@@ -367,14 +368,13 @@ contains
         s0_=s0
         ct0_=ct0
         p0_=p0
-!         call ncwrite(s0_,'s0_.nc','fort',1)
+
         allocate(s_(nxy,nz))
         allocate(ct_(nxy,nz))
         allocate(p_(nxy,nz))
         s_=s
         ct_=ct
         p_=p
-!        call ncwrite_new(s_,'s_.nc','fort')
 
         allocate(inds(nxy))
         inds=(/(i, i=1,nxy)/)
@@ -484,14 +484,14 @@ contains
         ct0_=ct0
         p0_=p0
         drho_=drho
-!         call ncwrite(s0_,'s0_.nc','fort',1)
+
         allocate(s_(nxy,nz))
         allocate(ct_(nxy,nz))
         allocate(p_(nxy,nz))
         s_=s
         ct_=ct
         p_=p
-!        call ncwrite_new(s_,'s_.nc','fort')
+
 
         allocate(inds(nxy))
         inds=(/(i, i=1,nxy)/)
@@ -942,10 +942,16 @@ contains
             endif
         enddo
 
+        if (allocated(j1)) then
+            deallocate(j1)
+        endif
         allocate(j1(size(j1_ew)+size(j1_ns)))
         j1(1:size(j1_ew))=j1_ew
         j1(size(j1_ew)+1: size(j1_ew)+size(j1_ns))=j1_ns
 
+        if (allocated(j2)) then
+            deallocate(j2)
+        endif
         allocate(j2(size(j2_ew)+size(j2_ns)))
         j2(1:size(j2_ew))=j2_ew
         j2(size(j2_ew)+1: size(j2_ew)+size(j2_ns))=j2_ns
@@ -953,9 +959,6 @@ contains
         !condition
         y(size(y))=0.0d0
 
-!        call ncwrite(pack(dble(j1),.true.),'j1.nc','j1',1)
-!        call ncwrite(pack(dble(j2),.true.),'j2.nc','j2',1)
-!        call ncwrite(pack(y,.true.),'y.nc','y',1)
 
     end subroutine lsqr_Ay
 
@@ -977,7 +980,8 @@ contains
         real(rk) :: damp=0.0d0 ! damping parameter
         logical :: wantse=.false. ! standard error estimates
         real(rk), dimension(1) :: se=(/0.0d0/)
-        real(rk) :: atol=1.0d-11
+        !real(rk) :: atol=1.0d-4
+        real(rk) :: atol=1.0d-15
         real(rk) :: btol=0.0d0
         real(rk) :: conlim=0.0d0
         !integer :: itnlim=450 ! max. number of iterations
@@ -1000,7 +1004,8 @@ contains
         allocate(b(size(y)))
         x=0.0d0
         b=y
-        m=size(y)
+        deallocate(y)
+        m=size(b)
         n=size(x)
 
         write(*,*) 'calling LSQR...'
@@ -1008,9 +1013,12 @@ contains
                      x, se,                                         &
                      atol, btol, conlim, itnlim, nout,              &
                      istop, itn, Anorm, Acond, rnorm, Arnorm, xnorm )
-        write(*,*) 'istop: ',istop
-        write(*,*) 'rnorm: ',rnorm
-        write(*,*) 'Arnorm/(Anorm*rnorm): ', Arnorm/(Anorm*rnorm)
+
+
+        !write(*,*) 'istop: ',istop
+        !write(*,*) 'rnorm: ',rnorm
+        !write(*,*) 'Arnorm/(Anorm*rnorm): ', Arnorm/(Anorm*rnorm)
+        write(*,*) '...done. Number of LSQR iterations:', itn
 
         nx=size(drhox,1)
         ny=size(drhox,2)
@@ -1019,7 +1027,7 @@ contains
         allocate(drho(nx,ny))
 
         drho_(:)=nan
-!        call ncwrite(pack(drho_,.true.),'drho_.nc','drho_',2)
+
         do i=1,size(regions(1)%points)
             drho_(regions(1)%points(i))= x(i)
         enddo
@@ -1280,63 +1288,5 @@ contains
 
     end subroutine find_regions
 
-
-!    subroutine epsilon_(sns,ctns,pns,e1t,e2t,ex,ey)
-!        real(rk), dimension(:,:), intent(in) :: sns, ctns, pns, e1t, e2t
-!        real(rk), dimension(:,:), intent(out) :: ex, ey
-!        real(rk), dimension(nx, ny) :: gradx_s, grady_s, gradx_ct, grady_ct
-!        real(rk), dimension(nx,ny) :: alpha, beta, alphax, alphay, betax, betay
-!        real(rk), dimension(nx,ny) :: debug
-!        integer :: i, j, hoitmyxy, setnan
-!        real(rk) :: nan
-!        logical :: zonally_periodic
-!
-!        namelist /user_input/ zonally_periodic
-!
-!        open(1,file='user_input.nml')
-!        read(1,user_input)
-!        close(1)
-!
-!        call ncwrite(pack(sns,.true.),'e1t.nc','e1t',2)
-!        call grad_surf(ctns,e1t,e2t,gradx_ct,grady_ct)
-!        call grad_surf(sns,e1t,e2t,gradx_s,grady_s)
-!        call ncwrite(pack(ctns,.true.),'e1t.nc','e1t',2)
-!        call ncwrite(pack(grady_ct,.true.),'grady_ct.nc','grady_ct',2)
-!        call ncwrite(pack(gradx_s,.true.),'gradx_s.nc','gradx_s',2)
-!
-!        nxy=nx*ny
-!
-!        do j=1,ny
-!            do i=1,nx
-!                alpha(i,j)=gsw_alpha(sns(i,j),ctns(i,j),pns(i,j))
-!            enddo
-!        enddo
-!        do j=1,ny
-!            do i=1,nx
-!                beta(i,j)=gsw_beta(sns(i,j),ctns(i,j),pns(i,j))
-!            enddo
-!        enddo
-!
-!        alphax=0.5d0*(alpha+cshift(alpha,1,1))
-!        alphay=0.5d0*(alpha+cshift(alpha,1,2))
-!        betax=0.5d0*(beta+cshift(beta,1,1))
-!        betay=0.5d0*(beta+cshift(beta,1,2))
-!
-!        setnan=0 ! hide division by 0 at compile time
-!        nan=0d0/setnan
-!
-!        alphay(:,ny)=nan
-!        betay(:,ny)=nan
-!
-!        if (.not.(zonally_periodic)) then
-!            alphax(nx,:)=nan
-!            betax(nx,:)=nan
-!        endif
-!
-!        ex=betax*gradx_s-alphax*gradx_ct
-!        ey=betay*grady_s-alphay*grady_ct
-!
-!
-!    end subroutine epsilon_
 
 end module ansu
