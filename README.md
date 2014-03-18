@@ -5,21 +5,23 @@ This program transforms a single poorly adjusted surface (such as a
 potential density surface) into an 
 approximately neutral surface with minimal error during a number of iterations. 
 
-References: 
+References:  
 Klocker, A., McDougall, T., Jackett, D., 2009. A new method for forming approximately neutral
-surfaces. Ocean Science 5, 155–172.
+surfaces. Ocean Science 5, 155–172.  
 Riha, S., McDougall, T. J., Barker, P.M. (unpublished manuscript, 2014): Improvements of an algorithm for 
 forming approximately neutral surfaces. http://www.hoitaus.com/drupal/files/publications/paper_syd1_draft.pdf
 
 
 #### DIRECTORY STRUCTURE AND BUILD:
 
-##### ansu.f90: Fortran module providing the subroutine optimize_surface.f90. Depends on the 
+##### ansu.f90:  
+Fortran module providing the subroutine optimize_surface.f90. Depends on the 
 GSW Oceanographic Toolbox and the LSQR algorithm (see below). To build the module, edit the 
 Makefile to point to the dependencies, and type
 	make ansu.o
 	
-##### run.f90: An executable program that illustrates the use of optimize_surface.f90. Additionaly
+##### run.f90:  
+An executable program that illustrates the use of optimize_surface.f90. Additionaly
 to the GSW Toolbox and LSQR, the NetCDF library must be available to read/write data. The input
 data set (10 MB) can be downloaded from http://www.hoitaus.com/drupal/files/data/os_input.nc
 To build the executable, edit the Makefile to point to the dependencies, and type
