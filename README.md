@@ -1,4 +1,5 @@
 ### ansu_fortran
+
 A Fortran program for calculating approximately neutral surfaces in the ocean. 
 
 This program transforms a single poorly adjusted surface (such as a 
@@ -20,7 +21,7 @@ References:
    GSW Oceanographic Toolbox and the LSQR algorithm (see below). To build the module, edit the 
    Makefile to point to the dependencies, and type
 
-	make ansu.o
+	`make ansu.o`
 	
 - `run.f90`  
    An executable program that illustrates the use of `optimize_surface()`. Additionaly
@@ -28,7 +29,7 @@ References:
    data set (10 MB) can be downloaded from [http://www.hoitaus.com/drupal/files/data/os_input.nc]
    To build the executable, edit the Makefile to point to the dependencies, and type
 
-	make run
+	`make run`
 
 - `user_input.nml`  
    Contains some parameters that can be changed without re-compiling.
@@ -46,6 +47,7 @@ References:
 
 
 #### DEPENDENCIES
+
 ansu.f90 depends on two third-party libraries.
 
 - Gibbs-SeaWater (GSW) Oceanographic Toolbox (Fortran library)
@@ -68,12 +70,14 @@ run.f90 additionally requires the NetCDF (Fortran) library
 
 
 #### FURTHER DOCUMENTATION
+
 Consider reading the comments in the file `run.f90` and the subroutine `optimize_surface()`
 in the file `ansu.f90`.
 
 
 
 #### REPOSITORY
+
 [https://github.com/poidl/ansu_fortran]
 
 [![githalytics.com alpha](https://cruel-carlota.pagodabox.com/1b6b47d26b067861a6dbf1387417841f "githalytics.com")](http://githalytics.com/poidl/ansu_fortran.git)
