@@ -63,7 +63,7 @@ contains
         allocate(drho(nx,ny))
 
         ! disregard data above mixed layer depth
-        call mld(s,ct,p,cut_off_choice)
+        !call mld(s,ct,p,cut_off_choice)
 
         ! lateral extension of outcropping/undercropping surface
         call wetting(sns,ctns,pns,s,ct,p,nneighbours)

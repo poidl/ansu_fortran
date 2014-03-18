@@ -16,41 +16,55 @@ forming approximately neutral surfaces.
 
 #### DIRECTORY STRUCTURE AND BUILD
 
-##### ansu.f90  
-Fortran module providing the subroutine `optimize_surface()`. Depends on the 
-GSW Oceanographic Toolbox and the LSQR algorithm (see below). To build the module, edit the 
-Makefile to point to the dependencies, and type
+- `ansu.f90`  
+   Fortran module providing the subroutine `optimize_surface()`. Depends on the 
+   GSW Oceanographic Toolbox and the LSQR algorithm (see below). To build the module, edit the 
+   Makefile to point to the dependencies, and type
 
 	make ansu.o
 	
-##### run.f90  
-An executable program that illustrates the use of `optimize_surface()`. Additionaly
-to the GSW Toolbox and LSQR, the NetCDF library must be available to read/write data. The input
-data set (10 MB) can be downloaded from [http://www.hoitaus.com/drupal/files/data/os_input.nc]
-To build the executable, edit the Makefile to point to the dependencies, and type
+- `run.f90`  
+   An executable program that illustrates the use of `optimize_surface()`. Additionaly
+   to the GSW Toolbox and LSQR, the NetCDF library must be available to read/write data. The input
+   data set (10 MB) can be downloaded from [http://www.hoitaus.com/drupal/files/data/os_input.nc]
+   To build the executable, edit the Makefile to point to the dependencies, and type
 
 	make run
+
+- `user_input.nml`
+Contains some parameters that can be changed without re-compiling.
+
+- `definitions.f90`
+Some global definitions
+
+- `ncutils.f90`
+NetCDF input/output
+
+- `third_party`
+Contains the LSQR library.
+
 
 
 
 #### DEPENDENCIES
 ansu.f90 depends on two third-party libraries.
 
-##### Gibbs-SeaWater (GSW) Oceanographic Toolbox (Fortran library)
-This library is not distributed with ansu. It is available at
-http://www.teos-10.org/software.htm
+- Gibbs-SeaWater (GSW) Oceanographic Toolbox (Fortran library)
+   This library is not distributed with ansu. It is available at
+   [http://www.teos-10.org/software.htm]
 
-##### LSQR: Sparse Equations and Least Squares
-Provided by Systems Optimization Laboratory, Stanford 
-University the terms of the OSI Common Public License (CPL)
-Reference: C. C. Paige and M. A. Saunders, LSQR: An algorithm for sparse
-linear equations and sparse least squares, TOMS 8(1), 43-71 (1982). 
-This library is distributed with ansu.
+- LSQR: Sparse Equations and Least Squares
+   Provided by Systems Optimization Laboratory, Stanford 
+   University the terms of the OSI Common Public License (CPL)
+   Reference: C. C. Paige and M. A. Saunders, LSQR: An algorithm for sparse
+   linear equations and sparse least squares, TOMS 8(1), 43-71 (1982). 
+   This library is distributed with ansu.
+
 
 run.f90 additionally requires the NetCDF (Fortran) library
 
-##### NetCDF 
-Available from [http://www.unidata.ucar.edu/software/netcdf/].
+- NetCDF 
+   Available from [http://www.unidata.ucar.edu/software/netcdf/].
 
 
 
