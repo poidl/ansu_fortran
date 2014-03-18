@@ -27,7 +27,6 @@ $(LSQRDIR)/lsqrblasInterface.o
 
 files = $(lsqrdeps) $(LSQRDIR)/lsqrModule.o definitions.o ncutils.o ansu.o run.o
 
-
 run: run.o $(files)
 	$(FORT) $(FLAGS) -o $@  $(files) \
 	$(GSWDIR)/gsw_oceanographic_toolbox.o $(LLFLAGS)

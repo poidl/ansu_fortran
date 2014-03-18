@@ -45,6 +45,8 @@ module ansu
 contains
 
     subroutine optimize_surface(sns,ctns,pns,s,ct,p)
+        ! Main function. All other functions in this module could, in principle,
+        ! be private (but are not for debugging purposes).
 
         real(rk), dimension(:,:), intent(inout) :: sns, ctns, pns
         real(rk), dimension(:,:,:), intent(in) :: s, ct, p
@@ -65,7 +67,8 @@ contains
 
         ! lateral extension of outcropping/undercropping surface
         call wetting(sns,ctns,pns,s,ct,p,nneighbours)
-        write(*,*) 'Wetting...number of added points: ', nneighbours
+        write(*,'(a34,1x,i4)')  &
+            'Wetting...number of added points:', nneighbours
 
         ! compute lateral gradient
         call delta_tilde_rho(sns,ctns,pns,drhox,drhoy)
@@ -847,14 +850,15 @@ contains
     end subroutine delta_tilde_rho
 
 
-    subroutine lsqr_Ay(regions,drhox,drhoy)
-        type(region_type), dimension(:), allocatable, intent(in) :: regions
+    subroutine lsqr_Ay(region,drhox,drhoy)
+        !type(region_type), dimension(:), allocatable, intent(in) :: regions
+        integer, dimension(:), intent(in) :: region
         real(rk), dimension(:,:), intent(in) :: drhox,drhoy
 
         real(rk),  dimension(:), allocatable :: drhox_, drhoy_
         logical, dimension(:), allocatable :: reg, en, nn
         integer, dimension(:), allocatable :: sreg, sreg_en, sreg_nn
-        integer, allocatable, dimension(:) :: region, j1_ew, j2_ew, j1_ns, j2_ns
+        integer, allocatable, dimension(:) :: j1_ew, j2_ew, j1_ns, j2_ns
         integer :: i, j, nxy, nx, ny
         logical :: zonally_periodic
         integer, allocatable, dimension(:) :: pts
@@ -883,8 +887,8 @@ contains
         drhox_=pack(drhox,.true.)
         drhoy_=pack(drhoy,.true.)
 
-        allocate(region(size(regions(1)%points)))
-        region=regions(1)%points
+        !allocate(region(size(regions(1)%points)))
+        !region=regions(1)%points
 
         reg=.false.
         do i=1,size(region)
@@ -969,9 +973,9 @@ contains
         real(rk),  dimension(:,:), allocatable, intent(out) :: drho
 
         real(rk),  dimension(:), allocatable :: drho_
-        integer, allocatable, dimension(:) :: j1, j2
-        real(rk), allocatable, dimension(:) :: x,b
-        integer :: i, j, nx, ny
+        integer, allocatable, dimension(:) :: region, j1, j2
+        real(rk), allocatable, dimension(:) :: x
+        integer :: i, j, nx, ny, ireg, nregions
         logical :: zonally_periodic
         namelist /domain/ zonally_periodic
 
@@ -998,39 +1002,47 @@ contains
 
         call getnan(nan)
 
-        call lsqr_Ay(regions,drhox,drhoy)
-
-        allocate(x(size(regions(1)%points)))
-        allocate(b(size(y)))
-        x=0.0d0
-        b=y
-        deallocate(y)
-        m=size(b)
-        n=size(x)
-
-        write(*,*) 'calling LSQR...'
-        call LSQR  ( m, n, Aprod1, Aprod2, b, damp, wantse,         &
-                     x, se,                                         &
-                     atol, btol, conlim, itnlim, nout,              &
-                     istop, itn, Anorm, Acond, rnorm, Arnorm, xnorm )
-
-
-        !write(*,*) 'istop: ',istop
-        !write(*,*) 'rnorm: ',rnorm
-        !write(*,*) 'Arnorm/(Anorm*rnorm): ', Arnorm/(Anorm*rnorm)
-        write(*,*) '...done. Number of LSQR iterations:', itn
-
         nx=size(drhox,1)
         ny=size(drhox,2)
-
         allocate(drho_(nx*ny))
-        allocate(drho(nx,ny))
-
         drho_(:)=nan
 
-        do i=1,size(regions(1)%points)
-            drho_(regions(1)%points(i))= x(i)
+        nregions=size(regions)
+
+        do ireg=1,nregions
+            allocate(region(size(regions(ireg)%points)))
+            region=regions(ireg)%points
+            !write(*,*) 'size(regions): ', size(regions)
+
+            call lsqr_Ay(region,drhox,drhoy)
+
+            allocate(x(size(region)))
+            x=0.0d0
+            m=size(y)
+            n=size(x)
+
+            call LSQR  ( m, n, Aprod1, Aprod2, y, damp, wantse,         &
+                         x, se,                                         &
+                         atol, btol, conlim, itnlim, nout,              &
+                         istop, itn, Anorm, Acond, rnorm, Arnorm, xnorm )
+            deallocate(y)
+
+            !write(*,*), 'Region Number'
+            !write(*,*), 'Region Size'
+            !write(*,*), 'Number of LSQR iterations'
+            write(*,'(i3,1x,i5,1x,i5)') &
+                ireg,size(region),itn
+
+            do i=1,size(region)
+                drho_(region(i))= x(i)
+            enddo
+
+            deallocate(x)
+            deallocate(region)
+
         enddo
+
+        allocate(drho(nx,ny))
         drho=reshape( drho_,(/nx,ny/) )
 
     end subroutine solve_lsqr

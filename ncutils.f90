@@ -16,7 +16,7 @@ contains
     subroutine ncread(sns,ctns,pns,s,ct,p)
 
         !character (len = *), parameter :: FILE_NAME = "/home/z3439823/mymatlab/omega/ansu_utils/exp219/data/os_input.nc"
-        character (len = *), parameter :: FILE_NAME = "/home/z3439823/mymatlab/omega/ansu_utils/exp229/data/os_input.nc"
+        character (len = *), parameter :: FILE_NAME = "/home/z3439823/mymatlab/omega/ansu_utils/exp583/data/os_input.nc"
         real(rk), dimension(:,:), intent(inout) :: sns, ctns, pns
         real(rk), dimension(:,:,:), intent(inout) :: s, ct, p
         integer :: ncid, varid
