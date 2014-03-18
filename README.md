@@ -12,21 +12,21 @@ Riha, S., McDougall, T. J., Barker, P.M. (unpublished manuscript, 2014): Improve
 forming approximately neutral surfaces. http://www.hoitaus.com/drupal/files/publications/paper_syd1_draft.pdf
 
 
-## DIRECTORY STRUCTURE AND BUILD:
+#### DIRECTORY STRUCTURE AND BUILD:
 
-# ansu.f90: Fortran module providing the subroutine optimize_surface.f90. Depends on the 
+##### ansu.f90: Fortran module providing the subroutine optimize_surface.f90. Depends on the 
 GSW Oceanographic Toolbox and the LSQR algorithm (see below). To build the module, edit the 
 Makefile to point to the dependencies, and type
 	make ansu.o
 	
-# run.f90: An executable program that illustrates the use of optimize_surface.f90. Additionaly
+##### run.f90: An executable program that illustrates the use of optimize_surface.f90. Additionaly
 to the GSW Toolbox and LSQR, the NetCDF library must be available to read/write data. The input
 data set (10 MB) can be downloaded from http://www.hoitaus.com/drupal/files/data/os_input.nc
 To build the executable, edit the Makefile to point to the dependencies, and type
 	make run
 
 
-## DEPENDENCIES:
+#### DEPENDENCIES:
 ansu.f90 depends on two third-party libraries.
 
 1) Gibbs-SeaWater (GSW) Oceanographic Toolbox (Fortran library)
@@ -44,7 +44,7 @@ This library is distributed with ansu.
 http://www.unidata.ucar.edu/software/netcdf/
 
 
-## REPOSITORY:
+#### REPOSITORY:
 https://github.com/poidl/ansu_fortran
 
 [![githalytics.com alpha](https://cruel-carlota.pagodabox.com/1b6b47d26b067861a6dbf1387417841f "githalytics.com")](http://githalytics.com/poidl/ansu_fortran.git)
