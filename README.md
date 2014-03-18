@@ -6,11 +6,10 @@ potential density surface of global extent) into an
 approximately neutral surface with minimal error during a number of iterations. 
 
 References:  
-Klocker, A., McDougall, T., Jackett, D., 2009. A new method for forming approximately neutral
-surfaces. Ocean Science 5, 155–172.  
-Riha, S., McDougall, T. J., Barker, P.M. (unpublished manuscript, 2014): Improvements of an algorithm for 
-forming approximately neutral surfaces. 
-[http://www.hoitaus.com/drupal/files/publications/paper_syd1_draft.pdf]
+- Klocker, A., McDougall, T., Jackett, D., 2009. A new method for forming approximately neutral
+   surfaces. Ocean Science 5, 155–172.  
+- Riha, S., McDougall, T. J., Barker, P.M. (unpublished manuscript, 2014): Improvements of an algorithm for 
+   forming approximately neutral surfaces. [http://www.hoitaus.com/drupal/files/publications/paper_syd1_draft.pdf]
 
 
 
@@ -31,17 +30,17 @@ forming approximately neutral surfaces.
 
 	make run
 
-- `user_input.nml`
-Contains some parameters that can be changed without re-compiling.
+- `user_input.nml`  
+   Contains some parameters that can be changed without re-compiling.
 
-- `definitions.f90`
-Some global definitions
+- `definitions.f90`  
+   Some global definitions
 
-- `ncutils.f90`
-NetCDF input/output
+- `ncutils.f90`  
+   NetCDF input/output
 
-- `third_party`
-Contains the LSQR library.
+- `third_party`  
+   Contains the LSQR library.
 
 
 
