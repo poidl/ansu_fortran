@@ -1,8 +1,8 @@
 ### ansu_fortran
-A Fortran program for calculating approximately neutral surfaces. 
+A Fortran program for calculating approximately neutral surfaces in the ocean. 
 
 This program transforms a single poorly adjusted surface (such as a 
-potential density surface) into an 
+potential density surface of global extent) into an 
 approximately neutral surface with minimal error during a number of iterations. 
 
 References:  
@@ -13,16 +13,17 @@ forming approximately neutral surfaces.
 [http://www.hoitaus.com/drupal/files/publications/paper_syd1_draft.pdf]
 
 
-#### DIRECTORY STRUCTURE AND BUILD:
 
-##### ansu.f90:  
+#### DIRECTORY STRUCTURE AND BUILD
+
+##### ansu.f90  
 Fortran module providing the subroutine `optimize_surface()`. Depends on the 
 GSW Oceanographic Toolbox and the LSQR algorithm (see below). To build the module, edit the 
 Makefile to point to the dependencies, and type
 
 	make ansu.o
 	
-##### run.f90:  
+##### run.f90  
 An executable program that illustrates the use of `optimize_surface()`. Additionaly
 to the GSW Toolbox and LSQR, the NetCDF library must be available to read/write data. The input
 data set (10 MB) can be downloaded from [http://www.hoitaus.com/drupal/files/data/os_input.nc]
@@ -31,7 +32,8 @@ To build the executable, edit the Makefile to point to the dependencies, and typ
 	make run
 
 
-#### DEPENDENCIES:
+
+#### DEPENDENCIES
 ansu.f90 depends on two third-party libraries.
 
 ##### Gibbs-SeaWater (GSW) Oceanographic Toolbox (Fortran library)
@@ -45,15 +47,20 @@ Reference: C. C. Paige and M. A. Saunders, LSQR: An algorithm for sparse
 linear equations and sparse least squares, TOMS 8(1), 43-71 (1982). 
 This library is distributed with ansu.
 
-##### NetCDF: required for building the executable run.f90
-http://www.unidata.ucar.edu/software/netcdf/
+run.f90 additionally requires the NetCDF (Fortran) library
+
+##### NetCDF 
+Available from [http://www.unidata.ucar.edu/software/netcdf/].
+
 
 
 #### FURTHER DOCUMENTATION
 Consider reading the comments in the file `run.f90` and the subroutine `optimize_surface()`
 in the file `ansu.f90`.
 
-#### REPOSITORY:
-https://github.com/poidl/ansu_fortran
+
+
+#### REPOSITORY
+[https://github.com/poidl/ansu_fortran]
 
 [![githalytics.com alpha](https://cruel-carlota.pagodabox.com/1b6b47d26b067861a6dbf1387417841f "githalytics.com")](http://githalytics.com/poidl/ansu_fortran.git)
