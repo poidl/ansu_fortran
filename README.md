@@ -45,9 +45,13 @@ Reference: C. C. Paige and M. A. Saunders, LSQR: An algorithm for sparse
 linear equations and sparse least squares, TOMS 8(1), 43-71 (1982). 
 This library is distributed with ansu.
 
-##### run.f90 additionaly requires NetCDF.
+##### NetCDF: required for building the executable run.f90
 http://www.unidata.ucar.edu/software/netcdf/
 
+
+#### FURTHER DOCUMENTATION
+Consider reading the comments in the file `run.f90` and the subroutine `optimize_surface()`
+in the file `ansu.f90`.
 
 #### REPOSITORY:
 https://github.com/poidl/ansu_fortran
