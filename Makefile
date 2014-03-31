@@ -1,11 +1,12 @@
 FORT=gfortran
 NCDIR = /home/z3439823/programs/netcdf
-GSWDIR= /home/z3439823/fortran/gsw_fortran_v3_01
+#GSWDIR= /home/z3439823/fortran/gsw_fortran_v3_02
+GSWDIR= /home/z3439823/eclipse/workspace/gsw_fortran
 LSQRDIR= /home/z3439823/eclipse/workspace/ansu/third_party/lsqr2
 
-FLAGS= -g -O 
+#FLAGS= -g -O 
 #FLAGS= -O3
-#FLAGS= -pg
+FLAGS= -pg -O3
 
 # Note on LLFLAGS: options preceeding "-Wl' are for linking at compile time, 
 # succeeding ones are for linking at load time (or runtime). In 

@@ -20,7 +20,7 @@ program run
     call ncread(sns,ctns,pns,s,ct,p)
 
     ! write the initial surface to a netcdf file
-    !call ncwrite(pack(pns,.true.),shape(pns),'pns0.nc','pns')
+    call ncwrite(pack(pns,.true.),shape(pns),'pns0.nc','pns')
 
     ! In each iteration, the following will be written to standard out.
     ! A region is a 4-connected neighbourhood on the current surface
