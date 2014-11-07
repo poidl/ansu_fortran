@@ -12,7 +12,7 @@ program run
     real(rk), dimension(nx,ny) :: sns, ctns, pns
     integer :: it, nit
 
-    nit=6
+    nit=3
 
     ! read input data: sns, ctns, pns are 2-d and
     ! represent sal., temp. and pressure on the initial surface.
@@ -41,13 +41,13 @@ program run
         call optimize_surface(sns,ctns,pns,s,ct,p)
 
         ! write surfaces in each iteration
-!        if (it.eq.1) then
-!            call ncwrite(pack(pns,.true.),shape(pns),'pns1.nc','pns')
+        if (it.eq.1) then
+            call ncwrite(pack(pns,.true.),shape(pns),'pns1.nc','pns')
 !        else if (it.eq.2) then
 !            call ncwrite(pack(pns,.true.),shape(pns),'pns2.nc','pns')
 !        else if (it.eq.3) then
 !            call ncwrite(pack(pns,.true.),shape(pns),'pns3.nc','pns')
-!        endif
+        endif
     enddo
 
     ! write final surface

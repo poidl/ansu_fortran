@@ -1,27 +1,27 @@
 !This is part of the analyze_surface toolbox, (C) 2009 A. Klocker
-!Modified by P. Barker (2010-2013)
-!Modified by S. Riha (2013-2014)
+!Partially modified by P. Barker (2010-13)
+!Partially modified by S. Riha (2013)
 !Principal investigator: Trevor McDougall
 !
-!Translated to Fortran by S. Riha (2013-2014)
+!Translated to Fortran by S. Riha (2013)
 
 module ansu
     use definitions
     use lsqrModule, only : LSQR
-    !use ncutils
+!    use ncutils
     implicit none
 
-    !=============================================================
+!=============================================================
     public :: optimize_surface, mld, delta_tilde_rho, find_regions, &
-        solve_lsqr, dz_from_drho, wetting
+               solve_lsqr, dz_from_drho, wetting
 
-    !=============================================================
+!=============================================================
     private
 
     real(rk),  allocatable, dimension(:) :: y
     integer,  allocatable, dimension(:) ::  j1, j2
 
-    !=============================================================
+!=============================================================
 
     interface
         function gsw_rho(sa,ct,p)
@@ -29,11 +29,6 @@ module ansu
             real (rk)  :: gsw_rho
             real (rk) :: sa, ct, p
         end function gsw_rho
-        !        function gsw_rho_vectorized(sa,ct,p)
-        !            integer, parameter :: rk = selected_real_kind(14,30)
-        !            real (rk), dimension(:) :: gsw_rho_vectorized
-        !            real (rk), dimension(:) :: sa, ct, p
-        !        end function gsw_rho_vectorized
         function gsw_alpha(sa,ct,p)
             integer, parameter :: rk = selected_real_kind(14,30)
             real (rk)  :: gsw_alpha
@@ -50,8 +45,6 @@ module ansu
 contains
 
     subroutine optimize_surface(sns,ctns,pns,s,ct,p)
-        ! Main function. All other functions in this module could, in principle,
-        ! be private (but are not for debugging purposes).
 
         real(rk), dimension(:,:), intent(inout) :: sns, ctns, pns
         real(rk), dimension(:,:,:), intent(in) :: s, ct, p
@@ -68,12 +61,10 @@ contains
         allocate(drho(nx,ny))
 
         ! disregard data above mixed layer depth
-        !call mld(s,ct,p,cut_off_choice)
+        call mld(s,ct,p,cut_off_choice)
 
         ! lateral extension of outcropping/undercropping surface
-        call wetting_simple(sns,ctns,pns,s,ct,p,nneighbours)
-        write(*,'(a34,1x,i4)')  &
-            'Wetting...number of added points:', nneighbours
+        call wetting(sns,ctns,pns,s,ct,p,nneighbours)
 
         ! compute lateral gradient
         call delta_tilde_rho(sns,ctns,pns,drhox,drhoy)
@@ -86,7 +77,6 @@ contains
 
         ! vertical integration
         call dz_from_drho(sns, ctns, pns, s, ct, p, drho)
-
 
     end subroutine optimize_surface
 
@@ -126,14 +116,14 @@ contains
         ct_=reshape(ct,[nx*ny,nz])
         p_=reshape(p,[nx*ny,nz])
 
-        !call depth_ntp_iter_drho(s0,ct0,p0,s_,ct_,p_,drho0,sns_,ctns_,pns_)
-        call depth_ntp_simple(s0,ct0,p0,s_,ct_,p_,drho0,sns_,ctns_,pns_)
+        call depth_ntp_iter_drho(s0,ct0,p0,s_,ct_,p_,drho0,sns_,ctns_,pns_)
 
         sns=reshape(sns_,[nx,ny])
         ctns=reshape(ctns_,[nx,ny])
         pns=reshape(pns_,[nx,ny])
 
     end subroutine dz_from_drho
+
 
     subroutine wetting(sns,ctns,pns,s,ct,p,nneighbours)
         real(rk), dimension(:,:), intent(inout) :: sns, ctns, pns
@@ -234,12 +224,9 @@ contains
         allocate(ctns_new(size(iwo)))
         allocate(pns_new(size(iwo)))
 
-        call depth_ntp_iter_drho(sns_(inbr),ctns_(inbr),pns_(inbr),  &
-            s_(iwo,:),ct_(iwo,:),p_(iwo,:), 0*sns_(inbr), &
-            sns_new,ctns_new,pns_new)
-        !        call depth_ntp_simple(sns_(inbr),ctns_(inbr),pns_(inbr),  &
-        !                            s_(iwo,:),ct_(iwo,:),p_(iwo,:), 0*sns_(inbr), &
-        !                            sns_new,ctns_new,pns_new)
+        call depth_ntp_iter(sns_(inbr),ctns_(inbr),pns_(inbr),  &
+                            s_(iwo,:),ct_(iwo,:),p_(iwo,:),  &
+                            sns_new,ctns_new,pns_new)
 
         sns_(iwo)=sns_new
         ctns_(iwo)=ctns_new
@@ -264,12 +251,9 @@ contains
         allocate(ctns_new(size(iwo)))
         allocate(pns_new(size(iwo)))
 
-        call depth_ntp_iter_drho(sns_(inbr),ctns_(inbr),pns_(inbr),  &
-            s_(iwo,:),ct_(iwo,:),p_(iwo,:), 0*sns_(inbr), &
-            sns_new,ctns_new,pns_new)
-        !        call depth_ntp_simple(sns_(inbr),ctns_(inbr),pns_(inbr),  &
-        !                            s_(iwo,:),ct_(iwo,:),p_(iwo,:), 0*sns_(inbr), &
-        !                            sns_new,ctns_new,pns_new)
+        call depth_ntp_iter(sns_(inbr),ctns_(inbr),pns_(inbr),  &
+                            s_(iwo,:),ct_(iwo,:),p_(iwo,:),  &
+                            sns_new,ctns_new,pns_new)
 
         sns_(iwo)=sns_new
         ctns_(iwo)=ctns_new
@@ -294,12 +278,9 @@ contains
         allocate(ctns_new(size(iwo)))
         allocate(pns_new(size(iwo)))
 
-        call depth_ntp_iter_drho(sns_(inbr),ctns_(inbr),pns_(inbr),  &
-            s_(iwo,:),ct_(iwo,:),p_(iwo,:), 0*sns_(inbr), &
-            sns_new,ctns_new,pns_new)
-        !       call depth_ntp_simple(sns_(inbr),ctns_(inbr),pns_(inbr),  &
-        !                           s_(iwo,:),ct_(iwo,:),p_(iwo,:), 0*sns_(inbr), &
-        !                           sns_new,ctns_new,pns_new)
+        call depth_ntp_iter(sns_(inbr),ctns_(inbr),pns_(inbr),  &
+                            s_(iwo,:),ct_(iwo,:),p_(iwo,:),  &
+                            sns_new,ctns_new,pns_new)
 
         sns_(iwo)=sns_new
         ctns_(iwo)=ctns_new
@@ -323,12 +304,9 @@ contains
         allocate(ctns_new(size(iwo)))
         allocate(pns_new(size(iwo)))
 
-        call depth_ntp_iter_drho(sns_(inbr),ctns_(inbr),pns_(inbr),  &
-            s_(iwo,:),ct_(iwo,:),p_(iwo,:), 0*sns_(inbr), &
-            sns_new,ctns_new,pns_new)
-        !       call depth_ntp_simple(sns_(inbr),ctns_(inbr),pns_(inbr),  &
-        !                           s_(iwo,:),ct_(iwo,:),p_(iwo,:), 0*sns_(inbr), &
-        !                           sns_new,ctns_new,pns_new)
+        call depth_ntp_iter(sns_(inbr),ctns_(inbr),pns_(inbr),  &
+                            s_(iwo,:),ct_(iwo,:),p_(iwo,:),  &
+                            sns_new,ctns_new,pns_new)
 
         sns_(iwo)=sns_new
         ctns_(iwo)=ctns_new
@@ -341,214 +319,6 @@ contains
         pns=reshape(pns_, [nx,ny])
 
     end subroutine wetting
-
-
-    subroutine wetting_simple(sns,ctns,pns,s,ct,p,nneighbours)
-        real(rk), dimension(:,:), intent(inout) :: sns, ctns, pns
-        real(rk), dimension(:,:,:), intent(in) :: s, ct, p
-        integer, intent(out) :: nneighbours
-
-        real(rk), dimension(:), allocatable :: sns_, ctns_, pns_, s1
-        real(rk), dimension(:,:), allocatable :: s_, ct_, p_
-        real(rk), dimension(:), allocatable :: sns_new, ctns_new, pns_new
-        logical, dimension(:), allocatable :: wet, wets, nn, sn, en, wn, nbr
-        integer, dimension(:), allocatable :: inds, inds_nbr
-        integer, dimension(:), allocatable :: inb, isb
-        integer, dimension(:), allocatable :: ieb, iwb
-        integer, dimension(:), allocatable :: inbr, iwo
-        integer :: i, nxy, nx, ny, nz
-        logical :: zonally_periodic
-
-        namelist /domain/ zonally_periodic
-
-        open(1,file='user_input.nml')
-        read(1,domain)
-        close(1)
-
-        nx=size(s,1)
-        ny=size(s,2)
-        nz=size(s,3)
-        nxy=nx*ny
-
-        allocate(sns_(nxy))
-        allocate(ctns_(nxy))
-        allocate(pns_(nxy))
-        allocate(s1(nxy))
-
-        allocate(s_(nxy,nz))
-        allocate(ct_(nxy,nz))
-        allocate(p_(nxy,nz))
-
-        allocate(wet(nxy))
-        allocate(wets(nxy))
-        allocate(nn(nxy))
-        allocate(sn(nxy))
-        allocate(en(nxy))
-        allocate(wn(nxy))
-        allocate(nbr(nxy))
-
-        allocate(inb(nx))
-        allocate(isb(nx))
-        allocate(ieb(ny))
-        allocate(iwb(ny))
-
-        sns_=pack(sns,.true.)
-        ctns_=pack(ctns,.true.)
-        pns_=pack(pns,.true.)
-
-        s_=reshape(s,[nxy,nz])
-        ct_=reshape(ct,[nxy,nz])
-        p_=reshape(p,[nxy,nz])
-
-        s1=pack(s(:,:,1),.true.)
-
-        wet=(.not.(isnan(s1))).and.(isnan(sns_)) ! wet points at ocean surface excluding ans
-        wets=(.not.isnan(sns_)) ! wet points on ans
-
-        inb=[(i, i= (ny-1)*nx+1, ny*nx)] ! indices of northern boundary
-        isb=[(i, i= 1, nx)]
-        ieb=[(i, i= nx, nxy, nx)]
-        iwb=[(i, i= 1, (ny-1)*nx+1, nx)]
-
-        nn=(wet).and.(cshift(wets,nx)) ! wet points with northern neighbour on ans
-        nn(inb)=.false.
-        sn=(wet).and.(cshift(wets,-nx))
-        sn(isb)=.false.
-        en=(wet).and.(cshift(wets,1))
-        wn=(wet).and.(cshift(wets,-1))
-        if (zonally_periodic) then
-            en(ieb)=(wet(ieb)).and.(wets(iwb))
-            wn(iwb)=(wet(iwb)).and.(wets(ieb))
-        else
-            en(ieb)=.false.
-            wn(iwb)=.false.
-        endif
-
-        ! if a point adjacent to ans boundary has multiple neighbours, just do one neutral
-        ! calculation
-        wn= (wn) .and. (.not.(en))
-        nn= (nn) .and. (.not.(wn)) .and. (.not.(en))
-        sn= (sn) .and. (.not.(nn)) .and. (.not.(wn)) .and. (.not.(en))
-
-        ! expand in western direction
-        inds=[(i,i=1,nxy)]
-        inds_nbr=inds+1
-        inds_nbr(ieb)=iwb
-
-        call find(en,iwo)
-        inbr=inds_nbr(iwo)
-
-        allocate(sns_new(size(iwo)))
-        allocate(ctns_new(size(iwo)))
-        allocate(pns_new(size(iwo)))
-
-        !        call depth_ntp_iter_drho(sns_(inbr),ctns_(inbr),pns_(inbr),  &
-        !                            s_(iwo,:),ct_(iwo,:),p_(iwo,:), 0*sns_(inbr), &
-        !                            sns_new,ctns_new,pns_new)
-        call depth_ntp_simple(sns_(inbr),ctns_(inbr),pns_(inbr),  &
-            s_(iwo,:),ct_(iwo,:),p_(iwo,:), 0*sns_(inbr), &
-            sns_new,ctns_new,pns_new)
-
-        sns_(iwo)=sns_new
-        ctns_(iwo)=ctns_new
-        pns_(iwo)=pns_new
-
-        nneighbours=count(.not.(isnan(sns_new)))
-
-        deallocate(sns_new)
-        deallocate(ctns_new)
-        deallocate(pns_new)
-
-
-        ! expand in eastern direction
-        inds=[(i,i=1,nxy)]
-        inds_nbr=inds-1
-        inds_nbr(iwb)=ieb
-
-        call find(wn,iwo)
-        inbr=inds_nbr(iwo)
-
-        allocate(sns_new(size(iwo)))
-        allocate(ctns_new(size(iwo)))
-        allocate(pns_new(size(iwo)))
-
-        !        call depth_ntp_iter_drho(sns_(inbr),ctns_(inbr),pns_(inbr),  &
-        !                            s_(iwo,:),ct_(iwo,:),p_(iwo,:), 0*sns_(inbr), &
-        !                            sns_new,ctns_new,pns_new)
-        call depth_ntp_simple(sns_(inbr),ctns_(inbr),pns_(inbr),  &
-            s_(iwo,:),ct_(iwo,:),p_(iwo,:), 0*sns_(inbr), &
-            sns_new,ctns_new,pns_new)
-
-        sns_(iwo)=sns_new
-        ctns_(iwo)=ctns_new
-        pns_(iwo)=pns_new
-
-        nneighbours=nneighbours+count(.not.(isnan(sns_new)))
-
-        deallocate(sns_new)
-        deallocate(ctns_new)
-        deallocate(pns_new)
-
-
-        ! expand in southern direction
-        inds=[(i,i=1,nxy)]
-        inds_nbr=inds+nx
-        inds_nbr(inb)=isb
-
-        call find(nn,iwo)
-        inbr=inds_nbr(iwo)
-
-        allocate(sns_new(size(iwo)))
-        allocate(ctns_new(size(iwo)))
-        allocate(pns_new(size(iwo)))
-
-        !        call depth_ntp_iter_drho(sns_(inbr),ctns_(inbr),pns_(inbr),  &
-        !                            s_(iwo,:),ct_(iwo,:),p_(iwo,:), 0*sns_(inbr), &
-        !                            sns_new,ctns_new,pns_new)
-        call depth_ntp_simple(sns_(inbr),ctns_(inbr),pns_(inbr),  &
-            s_(iwo,:),ct_(iwo,:),p_(iwo,:), 0*sns_(inbr), &
-            sns_new,ctns_new,pns_new)
-
-        sns_(iwo)=sns_new
-        ctns_(iwo)=ctns_new
-        pns_(iwo)=pns_new
-
-        nneighbours=nneighbours+count(.not.(isnan(sns_new)))
-
-        deallocate(sns_new)
-        deallocate(ctns_new)
-        deallocate(pns_new)
-
-        ! expand in northern direction
-        inds=[(i,i=1,nxy)]
-        inds_nbr=inds-nx
-        inds_nbr(isb)=inb
-
-        call find(sn,iwo)
-        inbr=inds_nbr(iwo)
-
-        allocate(sns_new(size(iwo)))
-        allocate(ctns_new(size(iwo)))
-        allocate(pns_new(size(iwo)))
-
-        !        call depth_ntp_iter_drho(sns_(inbr),ctns_(inbr),pns_(inbr),  &
-        !                            s_(iwo,:),ct_(iwo,:),p_(iwo,:), 0*sns_(inbr), &
-        !                            sns_new,ctns_new,pns_new)
-        call depth_ntp_simple(sns_(inbr),ctns_(inbr),pns_(inbr),  &
-            s_(iwo,:),ct_(iwo,:),p_(iwo,:), 0*sns_(inbr), &
-            sns_new,ctns_new,pns_new)
-
-        sns_(iwo)=sns_new
-        ctns_(iwo)=ctns_new
-        pns_(iwo)=pns_new
-
-        nneighbours=nneighbours+count(.not.(isnan(sns_new)))
-
-        sns=reshape(sns_, [nx,ny])
-        ctns=reshape(ctns_, [nx,ny])
-        pns=reshape(pns_, [nx,ny])
-
-    end subroutine wetting_simple
 
     subroutine find(boolvec,itrue)
         logical, dimension(:), intent(in) :: boolvec
@@ -577,18 +347,13 @@ contains
         real(rk), dimension(:), intent(out) :: sns, ctns, pns
 
         real(rk), dimension(:), allocatable :: s0_, ct0_, p0_
-        !!!!!!!!!!!!!!!!!!!!!!!!
-        !        real(rk), dimension(:), allocatable :: mycast_flat, mybottle_flat
-        !        real(rk), dimension(:,:), allocatable :: pmid_, s0_stack, ct0_stack
-        !        real(rk), dimension(:,:), allocatable :: mycast, mybottle
-        !!!!!!!!!!!!!!!!!!!!!!!!
         real(rk), dimension(:,:), allocatable :: s_, ct_, p_
         real(rk), dimension(:,:), allocatable :: s0_stacked, ct0_stacked, p0_stacked
         integer :: stack, nxy, nz, refine_ints, cnt, i,j,k
         integer, dimension(:), allocatable :: inds
         logical, dimension(:), allocatable :: fr
         real(rk), dimension(:), allocatable :: s0_old, ct0_old, p0_old
-        real(rk), dimension(:,:), allocatable :: F
+        real(rk), dimension(:,:), allocatable :: F,cast,bottle
         real(rk) :: cast_, bottle_
 
         call getnan(nan)
@@ -602,13 +367,14 @@ contains
         s0_=s0
         ct0_=ct0
         p0_=p0
-
+!         call ncwrite(s0_,'s0_.nc','fort',1)
         allocate(s_(nxy,nz))
         allocate(ct_(nxy,nz))
         allocate(p_(nxy,nz))
         s_=s
         ct_=ct
         p_=p
+!        call ncwrite_new(s_,'s_.nc','fort')
 
         allocate(inds(nxy))
         inds=(/(i, i=1,nxy)/)
@@ -620,60 +386,28 @@ contains
         pns=nan
 
         stack=nz
-        refine_ints=2
+        refine_ints=100
 
         cnt=0
         do while (.true.)
             cnt=cnt+1
 
+            allocate(cast(count(fr),stack))
+            allocate(bottle(count(fr),stack))
             allocate(F(count(fr),stack))
 
-            !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            !            allocate(pmid_(count(fr),stack))
-            !            allocate(s0_stack(count(fr),stack))
-            !            allocate(ct0_stack(count(fr),stack))
-            !            allocate(mycast(count(fr),stack))
-            !            allocate(mybottle(count(fr),stack))
-            !            allocate(mycast_flat(count(fr)*stack))
-            !            allocate(mybottle_flat(count(fr)*stack))
-            !
-            !            do k=1,stack
-            !               do i=1,size(F,1)
-            !                    pmid_(i,k)=0.5d0*(p_(i,k)+p0_(i))
-            !                    s0_stack(i,k)=s0_(i)
-            !                    ct0_stack(i,k)=ct0_(i)
-            !               enddo
-            !            enddo
-            !
-            !            call gsw_rho_vectorized(pack(s_,.true.),pack(ct_,.true.),pack(pmid_,.true.),mycast_flat)
-            !            call gsw_rho_vectorized(pack(s0_stack,.true.),pack(ct0_stack,.true.),pack(pmid_,.true.),mybottle_flat)
-            !
-            !            mycast=reshape(mycast_flat,[count(fr),stack])
-            !            mybottle=reshape(mybottle_flat,[count(fr),stack])
-            !
-            !            F=mycast-mybottle
-            !
-            !            deallocate(pmid_)
-            !            deallocate(s0_stack)
-            !            deallocate(ct0_stack)
-            !            deallocate(mycast)
-            !            deallocate(mybottle)
-            !            deallocate(mycast_flat)
-            !            deallocate(mybottle_flat)
-
             do k=1,stack
-                do i=1,size(F,1)
+               do i=1,size(F,1)
                     cast_=gsw_rho(s_(i,k),ct_(i,k),0.5d0*(p_(i,k)+p0_(i)))
                     bottle_=gsw_rho(s0_(i),ct0_(i),0.5d0*(p_(i,k)+p0_(i)))
 
                     F(i,k)=cast_-bottle_
-                enddo
+               enddo
             enddo
-            !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
             deallocate(fr)
             call root_core(F,inds,refine_ints, &
-                s_,ct_,p_,sns,ctns,pns,fr)
+                            s_,ct_,p_,sns,ctns,pns,fr)
 
             if (all(.not.(fr))) then
                 exit
@@ -681,6 +415,8 @@ contains
 
             stack=refine_ints+1
 
+            deallocate(cast)
+            deallocate(bottle)
             deallocate(F)
 
             allocate(s0_old(size(fr)))
@@ -727,17 +463,12 @@ contains
 
         real(rk), dimension(:), allocatable :: s0_, ct0_, p0_, drho_
         real(rk), dimension(:,:), allocatable :: s_, ct_, p_
-        !!!!!!!!!!!!!!!!!!!!!!!!
-        !        real(rk), dimension(:), allocatable :: mycast_flat, mybottle_flat
-        !        real(rk), dimension(:,:), allocatable :: pmid_, s0_stack, ct0_stack, drho_stack
-        !        real(rk), dimension(:,:), allocatable :: mycast, mybottle
-        !!!!!!!!!!!!!!!!!!!!!!!!
         real(rk), dimension(:,:), allocatable :: s0_stacked, ct0_stacked, p0_stacked
         integer :: stack, nxy, nz, refine_ints, cnt, i,j,k
         integer, dimension(:), allocatable :: inds
         logical, dimension(:), allocatable :: fr
         real(rk), dimension(:), allocatable :: s0_old, ct0_old, p0_old, drho_old
-        real(rk), dimension(:,:), allocatable :: F
+        real(rk), dimension(:,:), allocatable :: F,cast,bottle
         real(rk) :: cast_, bottle_
 
         call getnan(nan)
@@ -753,14 +484,14 @@ contains
         ct0_=ct0
         p0_=p0
         drho_=drho
-
+!         call ncwrite(s0_,'s0_.nc','fort',1)
         allocate(s_(nxy,nz))
         allocate(ct_(nxy,nz))
         allocate(p_(nxy,nz))
         s_=s
         ct_=ct
         p_=p
-
+!        call ncwrite_new(s_,'s_.nc','fort')
 
         allocate(inds(nxy))
         inds=(/(i, i=1,nxy)/)
@@ -771,77 +502,29 @@ contains
         ctns=nan
         pns=nan
 
-        !        ! discard land
-        !        nn=~isnan(s0);
-        !        iwet=~(sum(nn,1)==0);
-        !
-        !        s0=s0(iwet);
-        !        ct0=ct0(iwet);
-        !        p0=p0(iwet);
-        !        drho=drho(iwet);
-        !        s=s(:,iwet);
-        !        ct=ct(:,iwet);
-        !        p=p(:,iwet);
-        !        inds=inds(iwet);
-
         stack=nz
-        refine_ints=2
+        refine_ints=100
 
         cnt=0
         do while (.true.)
             cnt=cnt+1
 
+            allocate(cast(count(fr),stack))
+            allocate(bottle(count(fr),stack))
             allocate(F(count(fr),stack))
 
-            !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            !            allocate(pmid_(count(fr),stack))
-            !            allocate(s0_stack(count(fr),stack))
-            !            allocate(ct0_stack(count(fr),stack))
-            !            allocate(drho_stack(count(fr),stack))
-            !            allocate(mycast(count(fr),stack))
-            !            allocate(mybottle(count(fr),stack))
-            !            allocate(mycast_flat(count(fr)*stack))
-            !            allocate(mybottle_flat(count(fr)*stack))
-            !
-            !            do k=1,stack
-            !               do i=1,size(F,1)
-            !                    pmid_(i,k)=0.5d0*(p_(i,k)+p0_(i))
-            !                    s0_stack(i,k)=s0_(i)
-            !                    ct0_stack(i,k)=ct0_(i)
-            !                    drho_stack(i,k)=drho_(i)
-            !               enddo
-            !            enddo
-            !
-            !            call gsw_rho_vectorized(pack(s_,.true.),pack(ct_,.true.),pack(pmid_,.true.),mycast_flat)
-            !            call gsw_rho_vectorized(pack(s0_stack,.true.),pack(ct0_stack,.true.),pack(pmid_,.true.),mybottle_flat)
-            !
-            !            mycast=reshape(mycast_flat,[count(fr),stack])
-            !            mybottle=reshape(mybottle_flat,[count(fr),stack])
-            !
-            !            F=mycast-mybottle+drho_stack
-            !
-            !            deallocate(pmid_)
-            !            deallocate(s0_stack)
-            !            deallocate(ct0_stack)
-            !            deallocate(drho_stack)
-            !            deallocate(mycast)
-            !            deallocate(mybottle)
-            !            deallocate(mycast_flat)
-            !            deallocate(mybottle_flat)
-
             do k=1,stack
-                do i=1,size(F,1)
+               do i=1,size(F,1)
                     cast_=gsw_rho(s_(i,k),ct_(i,k),0.5d0*(p_(i,k)+p0_(i)))
                     bottle_=gsw_rho(s0_(i),ct0_(i),0.5d0*(p_(i,k)+p0_(i)))
 
                     F(i,k)=cast_-bottle_+drho_(i)
-                enddo
+               enddo
             enddo
-            !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
             deallocate(fr)
             call root_core(F,inds,refine_ints, &
-                s_,ct_,p_,sns,ctns,pns,fr)
+                            s_,ct_,p_,sns,ctns,pns,fr)
 
             if (all(.not.(fr))) then
                 exit
@@ -849,6 +532,8 @@ contains
 
             stack=refine_ints+1
 
+            deallocate(cast)
+            deallocate(bottle)
             deallocate(F)
 
             allocate(s0_old(size(fr)))
@@ -892,278 +577,8 @@ contains
     end subroutine depth_ntp_iter_drho
 
 
-    subroutine depth_ntp_simple(s0_,ct0_,p0_,s_,ct_,p_,drho_,sns,ctns,pns)
-
-        real(rk), dimension(:), intent(in) :: s0_, ct0_, p0_
-        real(rk), dimension(:,:), intent(in) :: s_, ct_, p_
-        real(rk), dimension(:), intent(in) :: drho_
-        real(rk), dimension(:), intent(out) :: sns, ctns, pns
-
-        real(rk), dimension(:), allocatable :: s0, ct0, p0, drho
-        real(rk), dimension(:,:), allocatable :: s, ct, p
-        real(rk), dimension(:), allocatable :: F1, F2, s1, s2, ct1, ct2, p1, p2
-
-
-        integer, dimension(:), allocatable :: inds, k1
-        logical, dimension(:), allocatable :: wet, go_deep, go_shallow
-        logical, dimension(:), allocatable :: search_initial, done
-        logical, dimension(:), allocatable :: zoom, found_1, found_2, found
-        real(rk) :: pmid, cast, bottle, F, ct_mid, s_mid, p_mid, F_mid, delta_root
-        integer :: nxy, nz, nxy_wet, cnt, i, k
-
-        real(rk), dimension(:), allocatable ::  debu
-        integer, dimension(:), allocatable ::  debu_int
-
-        namelist /root_finding/ delta_root
-
-        open(1,file='user_input.nml')
-        read(1,root_finding)
-        close(1)
-
-        call getnan(nan)
-        sns=nan
-        ctns=nan
-        pns=nan
-
-        nxy=size(s_,1)
-        nz=size(s_,2)
-
-        allocate(wet(nxy))
-
-        ! discard land
-        wet=.not.(isnan(s0_))
-        nxy_wet=count(wet)
-
-        allocate(s0(nxy_wet))
-        allocate(ct0(nxy_wet))
-        allocate(p0(nxy_wet))
-        allocate(drho(nxy_wet))
-
-        allocate(s(nxy_wet,nz))
-        allocate(ct(nxy_wet,nz))
-        allocate(p(nxy_wet,nz))
-
-        s0=nan
-        ct0=nan
-        p0=nan
-        drho=nan
-        s=nan
-        ct=nan
-        p=nan
-
-        allocate(inds(nxy_wet))
-
-        cnt=1
-        do i=1,nxy
-            if (wet(i)) then
-                s0(cnt)=s0_(i)
-                ct0(cnt)=ct0_(i)
-                p0(cnt)=p0_(i)
-                drho(cnt)=drho_(i)
-                inds(cnt)=i
-                s(cnt,:)=s_(i,:)
-                ct(cnt,:)=ct_(i,:)
-                p(cnt,:)=p_(i,:)
-                cnt=cnt+1
-            endif
-        enddo
-
-        allocate(k1(nxy_wet))
-        allocate(F1(nxy_wet))
-        allocate(F2(nxy_wet))
-        allocate(go_shallow(nxy_wet))
-        allocate(go_deep(nxy_wet))
-        allocate(search_initial(nxy_wet))
-        allocate(zoom(nxy_wet))
-        allocate(done(nxy_wet))
-        allocate(found(nxy_wet))
-        allocate(found_1(nxy_wet))
-        allocate(found_2(nxy_wet))
-        allocate(s1(nxy_wet))
-        allocate(s2(nxy_wet))
-        allocate(ct1(nxy_wet))
-        allocate(ct2(nxy_wet))
-        allocate(p1(nxy_wet))
-        allocate(p2(nxy_wet))
-
-        F1=nan
-        F2=nan
-        s1=nan
-        s2=nan
-        ct1=nan
-        ct2=nan
-        p1=nan
-        p2=nan
-        k1=-99 ! k1 of type integer
-        found=.false.
-        done=.false.
-
-        do k=1,nz-1
-            do i=1,nxy_wet
-                if ((p0(i)>=p(i,k)).and.(p0(i)<p(i,k+1))) then
-                    k1(i)=k
-                    pmid=0.5d0*(p(i,k)+p0(i))
-                    cast=gsw_rho(s(i,k),ct(i,k),pmid)
-                    bottle=gsw_rho(s0(i),ct0(i),pmid)
-                    F1(i)=cast-bottle+drho(i)
-
-                    pmid=0.5d0*(p(i,k+1)+p0(i))
-                    cast=gsw_rho(s(i,k+1),ct(i,k+1),pmid)
-                    bottle=gsw_rho(s0(i),ct0(i),pmid)
-                    F2(i)=cast-bottle+drho(i)
-                endif
-            enddo
-        enddo
-		TODO: ONLY EVALUATE ONCE
-        go_shallow = F1 >= 0.0d0+delta_root ! go shallower to find first bottle pair
-        go_deep    = F2 <= 0.0d0-delta_root ! go deeper to find first bottle pair
-
-        search_initial = (go_deep).or.(go_shallow)
-
-        zoom = (F1<0.0d0+delta_root).and.(F2>0.0d0-delta_root) ! bisect where true
-
-        done = ( .not.(go_shallow.or.go_deep) ).and.(.not.(zoom)) ! nans
-
-        do i=1,nxy_wet
-            if (zoom(i)) then
-                s1(i)=s(i,k1(i))
-                s2(i)=s(i,k1(i)+1)
-                ct1(i)=ct(i,k1(i))
-                ct2(i)=ct(i,k1(i)+1)
-                p1(i)=p(i,k1(i))
-                p2(i)=p(i,k1(i)+1)
-            endif
-        enddo
-
-        !!!!!!!!!!!!!!!!!!
-        !        allocate(debu(nxy))
-        !        allocate(debu_int(nxy))
-        !        debu=nan
-        !        write(*,*) 'nsn: ', nan
-        !        do i=1,nxy_wet
-        !!            if (k1(i).ne.-99) then
-        !!                debu(inds(i))=dble(k1(i))
-        !!            else
-        !!                 debu(inds(i))=nan
-        !!            endif
-        !
-        !            if (zoom(i)) then
-        !                debu(inds(i))=1.0d0
-        !            else
-        !                debu(inds(i))=0.0d0
-        !            endif
-        !!
-        !!            debu(inds(i))=s1(i)
-        !!            write(*,*) 'k1(i): ', k1(i)
-        !        enddo
-        !        call ncwrite(pack(debu,.true.),(/90,43/),'debu.nc','debu')
-        !
-        !!!!!!!!!!!!!!!!!!!
-
-        do while (any(.not.(done)))
-            do i=1,nxy_wet
-                if (.not.(done(i))) then
-                    if (search_initial(i)) then
-
-                        if (go_deep(i)) then
-                            k1(i)=k1(i)+1 ! upper bottle moves one deeper
-                            k=k1(i)+1 ! only need to evaluate the lower bottle
-                            if (k.le.nz) then
-                                pmid=0.5d0*(p(i,k)+p0(i))
-                                cast=gsw_rho(s(i,k),ct(i,k),pmid)
-                                bottle=gsw_rho(s0(i),ct0(i),pmid)
-                                F=cast-bottle+drho(i)
-                                if (.not.(isnan(F))) then
-                                    F1(i)=F2(i)
-                                    F2(i)=F
-                                else
-                                    done(i)=.true. ! bottom
-                                endif
-                            else
-                                done(i)=.true. ! below model domain
-                            endif
-                            if (F>0.0d0-delta_root) then
-                                search_initial(i)=.false.
-                                zoom(i)=.true. ! start bisection
-                            endif
-                        elseif (go_shallow(i)) then
-                            k1(i)=k1(i)-1 ! upper bottle moves one up
-                            k=k1(i) ! only need to evaluate upper bottle
-                            if (k.ge.1) then
-                                pmid=0.5d0*(p(i,k)+p0(i))
-                                cast=gsw_rho(s(i,k),ct(i,k),pmid)
-                                bottle=gsw_rho(s0(i),ct0(i),pmid)
-                                F=cast-bottle+drho(i)
-                                if (.not.(isnan(F))) then
-                                    F2(i)=F1(i)
-                                    F1(i)=F
-                                else
-                                    done(i)=.true. ! in sea ice
-                                endif
-                            else
-                                done(i)=.true. ! above free surface
-                            endif
-                            if (F<0.0d0+delta_root) then
-                                search_initial(i)=.false.
-                                zoom(i)=.true. ! start bisection
-                            endif
-                        endif
-                        if (zoom(i)) then
-                            s1(i)=s(i,k1(i))
-                            s2(i)=s(i,k1(i)+1)
-                            ct1(i)=ct(i,k1(i))
-                            ct2(i)=ct(i,k1(i)+1)
-                            p1(i)=p(i,k1(i))
-                            p2(i)=p(i,k1(i)+1)
-                        endif
-
-                    elseif (zoom(i)) then
-                        ! check if we are done
-                        found_1(i) = (abs(F1(i))).lt.(delta_root)
-                        found_2(i) = (abs(F2(i))).lt.(delta_root)
-                        if (found_1(i)) then
-                            sns(inds(i))=s1(i)
-                            ctns(inds(i))=ct1(i)
-                            pns(inds(i))=p1(i)
-                        elseif (found_2(i)) then
-                            sns(inds(i))=s2(i)
-                            ctns(inds(i))=ct2(i)
-                            pns(inds(i))=p2(i)
-                        endif
-                        done(i) = (found_1(i)).or.(found_2(i)) ! found zero crossing
-
-                        if (.not.(done(i))) then ! bisect
-                            s_mid=0.5d0*(s1(i)+s2(i))
-                            ct_mid=0.5d0*(ct1(i)+ct2(i))
-                            p_mid=0.5d0*(p1(i)+p2(i))
-                            pmid=0.5d0*(p_mid+p0(i))
-                            cast=gsw_rho(s_mid,ct_mid,pmid)
-                            bottle=gsw_rho(s0(i),ct0(i),pmid)
-                            F_mid=cast-bottle+drho(i)
-                            if (F_mid>0) then
-                                F2(i)=F_mid
-                                s2(i)=s_mid
-                                ct2(i)=ct_mid
-                                p2(i)=p_mid
-                            else
-                                F1(i)=F_mid
-                                s1(i)=s_mid
-                                ct1(i)=ct_mid
-                                p1(i)=p_mid
-                            endif
-                        endif
-                    endif ! search initial or zoom
-                endif ! not done
-
-            enddo
-        enddo
-
-
-    end subroutine depth_ntp_simple
-
-
     subroutine root_core(F,inds,refine_ints, &
-        s,ct,p,sns,ctns,pns,fr)
+                            s,ct,p,sns,ctns,pns,fr)
 
         real(rk), allocatable, dimension(:,:), intent(in) :: F
         integer, intent(in) :: refine_ints
@@ -1200,8 +615,8 @@ contains
 
         allocate(zc_F_stable(nxy,stack))
         zc_F_stable= (F_n).and.(cshift(F_p,1,2))
-        !        deallocate(F_p)
-        !        deallocate(F_n)
+        deallocate(F_p)
+        deallocate(F_n)
         zc_F_stable(:,stack)=.false.
 
         allocate(cs(nxy,stack))
@@ -1215,12 +630,12 @@ contains
         cs=merge(0,cs,cs/=1)
 
         allocate(k_zc(nxy))
-        k_zc=sum(cs,2)+1;        ! vertical index of shallowest stable zero crossing
+        k_zc=sum(cs,2)+1;! vertical index of shallowest stable zero crossing
 
         allocate(any_zc_F_stable(nxy))
         any_zc_F_stable=any(zc_F_stable,2)
 
-        !        deallocate(zc_F_stable)
+        deallocate(zc_F_stable)
 
         allocate(F_neg(nxy))
         F_neg=nan
@@ -1236,8 +651,8 @@ contains
         myfinal=(abs(F_neg)<=delta_root)
         cond1=abs(F_neg)>delta_root;
         fr= (any_zc_F_stable).and.(cond1)
-        !        deallocate(cond1)
-        !        deallocate(F_neg)
+        deallocate(cond1)
+        deallocate(F_neg)
 
         do i=1,nxy
             if (myfinal(i)) then
@@ -1251,7 +666,7 @@ contains
             return
         endif
 
-        !        deallocate(myfinal)
+        deallocate(myfinal)
 
         nxy_new=count(fr)
 
@@ -1432,15 +847,14 @@ contains
     end subroutine delta_tilde_rho
 
 
-    subroutine lsqr_Ay(region,drhox,drhoy)
-        !type(region_type), dimension(:), allocatable, intent(in) :: regions
-        integer, dimension(:), intent(in) :: region
+    subroutine lsqr_Ay(regions,drhox,drhoy)
+        type(region_type), dimension(:), allocatable, intent(in) :: regions
         real(rk), dimension(:,:), intent(in) :: drhox,drhoy
 
         real(rk),  dimension(:), allocatable :: drhox_, drhoy_
         logical, dimension(:), allocatable :: reg, en, nn
         integer, dimension(:), allocatable :: sreg, sreg_en, sreg_nn
-        integer, allocatable, dimension(:) :: j1_ew, j2_ew, j1_ns, j2_ns
+        integer, allocatable, dimension(:) :: region, j1_ew, j2_ew, j1_ns, j2_ns
         integer :: i, j, nxy, nx, ny
         logical :: zonally_periodic
         integer, allocatable, dimension(:) :: pts
@@ -1469,8 +883,8 @@ contains
         drhox_=pack(drhox,.true.)
         drhoy_=pack(drhoy,.true.)
 
-        !allocate(region(size(regions(1)%points)))
-        !region=regions(1)%points
+        allocate(region(size(regions(1)%points)))
+        region=regions(1)%points
 
         reg=.false.
         do i=1,size(region)
@@ -1528,16 +942,10 @@ contains
             endif
         enddo
 
-        if (allocated(j1)) then
-            deallocate(j1)
-        endif
         allocate(j1(size(j1_ew)+size(j1_ns)))
         j1(1:size(j1_ew))=j1_ew
         j1(size(j1_ew)+1: size(j1_ew)+size(j1_ns))=j1_ns
 
-        if (allocated(j2)) then
-            deallocate(j2)
-        endif
         allocate(j2(size(j2_ew)+size(j2_ns)))
         j2(1:size(j2_ew))=j2_ew
         j2(size(j2_ew)+1: size(j2_ew)+size(j2_ns))=j2_ns
@@ -1545,6 +953,9 @@ contains
         !condition
         y(size(y))=0.0d0
 
+!        call ncwrite(pack(dble(j1),.true.),'j1.nc','j1',1)
+!        call ncwrite(pack(dble(j2),.true.),'j2.nc','j2',1)
+!        call ncwrite(pack(y,.true.),'y.nc','y',1)
 
     end subroutine lsqr_Ay
 
@@ -1555,9 +966,9 @@ contains
         real(rk),  dimension(:,:), allocatable, intent(out) :: drho
 
         real(rk),  dimension(:), allocatable :: drho_
-        integer, allocatable, dimension(:) :: region, j1, j2
-        real(rk), allocatable, dimension(:) :: x
-        integer :: i, j, nx, ny, ireg, nregions
+        integer, allocatable, dimension(:) :: j1, j2
+        real(rk), allocatable, dimension(:) :: x,b
+        integer :: i, j, nx, ny
         logical :: zonally_periodic
         namelist /domain/ zonally_periodic
 
@@ -1566,8 +977,7 @@ contains
         real(rk) :: damp=0.0d0 ! damping parameter
         logical :: wantse=.false. ! standard error estimates
         real(rk), dimension(1) :: se=(/0.0d0/)
-        !real(rk) :: atol=1.0d-4
-        real(rk) :: atol=1.0d-15
+        real(rk) :: atol=1.0d-11
         real(rk) :: btol=0.0d0
         real(rk) :: conlim=0.0d0
         !integer :: itnlim=450 ! max. number of iterations
@@ -1584,47 +994,35 @@ contains
 
         call getnan(nan)
 
+        call lsqr_Ay(regions,drhox,drhoy)
+
+        allocate(x(size(regions(1)%points)))
+        allocate(b(size(y)))
+        x=0.0d0
+        b=y
+        m=size(y)
+        n=size(x)
+
+        write(*,*) 'calling LSQR...'
+        call LSQR  ( m, n, Aprod1, Aprod2, b, damp, wantse,         &
+                     x, se,                                         &
+                     atol, btol, conlim, itnlim, nout,              &
+                     istop, itn, Anorm, Acond, rnorm, Arnorm, xnorm )
+        write(*,*) 'istop: ',istop
+        write(*,*) 'rnorm: ',rnorm
+        write(*,*) 'Arnorm/(Anorm*rnorm): ', Arnorm/(Anorm*rnorm)
+
         nx=size(drhox,1)
         ny=size(drhox,2)
+
         allocate(drho_(nx*ny))
-        drho_(:)=nan
-
-        nregions=size(regions)
-
-        do ireg=1,nregions
-            allocate(region(size(regions(ireg)%points)))
-            region=regions(ireg)%points
-            !write(*,*) 'size(regions): ', size(regions)
-
-            call lsqr_Ay(region,drhox,drhoy)
-
-            allocate(x(size(region)))
-            x=0.0d0
-            m=size(y)
-            n=size(x)
-
-            call LSQR  ( m, n, Aprod1, Aprod2, y, damp, wantse,         &
-                x, se,                                         &
-                atol, btol, conlim, itnlim, nout,              &
-                istop, itn, Anorm, Acond, rnorm, Arnorm, xnorm )
-            deallocate(y)
-
-            !write(*,*), 'Region Number'
-            !write(*,*), 'Region Size'
-            !write(*,*), 'Number of LSQR iterations'
-            write(*,'(i3,1x,i5,1x,i5)') &
-                ireg,size(region),itn
-
-            do i=1,size(region)
-                drho_(region(i))= x(i)
-            enddo
-
-            deallocate(x)
-            deallocate(region)
-
-        enddo
-
         allocate(drho(nx,ny))
+
+        drho_(:)=nan
+!        call ncwrite(pack(drho_,.true.),'drho_.nc','drho_',2)
+        do i=1,size(regions(1)%points)
+            drho_(regions(1)%points(i))= x(i)
+        enddo
         drho=reshape( drho_,(/nx,ny/) )
 
     end subroutine solve_lsqr
@@ -1667,29 +1065,29 @@ contains
     end subroutine Aprod2
 
 
-    !    subroutine grad_surf(f,e1t,e2t,fx,fy)
-    !
-    !        real(rk),  dimension(:,:), intent(in) :: f, e1t, e2t
-    !        real(rk),  dimension(:,:), intent(out) :: fx, fy
-    !        logical :: zonally_periodic
-    !
-    !        namelist /domain/ zonally_periodic
-    !
-    !        open(1,file='user_input.nml')
-    !        read(1,domain)
-    !        close(1)
-    !
-    !        fx=(cshift(f,1,1)-f)/e1t
-    !
-    !        call getnan(nan)
-    !
-    !        if (.not.(zonally_periodic)) then
-    !            fx(nx,:)=nan
-    !        endif
-    !
-    !        fy=(cshift(f,1,2)-f)/e2t
-    !
-    !    end subroutine grad_surf
+!    subroutine grad_surf(f,e1t,e2t,fx,fy)
+!
+!        real(rk),  dimension(:,:), intent(in) :: f, e1t, e2t
+!        real(rk),  dimension(:,:), intent(out) :: fx, fy
+!        logical :: zonally_periodic
+!
+!        namelist /domain/ zonally_periodic
+!
+!        open(1,file='user_input.nml')
+!        read(1,domain)
+!        close(1)
+!
+!        fx=(cshift(f,1,1)-f)/e1t
+!
+!        call getnan(nan)
+!
+!        if (.not.(zonally_periodic)) then
+!            fx(nx,:)=nan
+!        endif
+!
+!        fy=(cshift(f,1,2)-f)/e2t
+!
+!    end subroutine grad_surf
 
 
     subroutine find_regions(pns,regions)
@@ -1809,7 +1207,7 @@ contains
                     outer: do i=2,size(neighbours)
                         do j=1,k
                             if (neighbours_tmp(j) == neighbours(i)) then
-                                ! Found a match so start looking again
+                              ! Found a match so start looking again
                                 cycle outer
                             end if
                         end do
@@ -1832,13 +1230,13 @@ contains
                 enddo
 
                 allocate(neighbours_tmp(count(.not.(neighbours==-2*nx))))
-                j=1
-                do i=1,size(neighbours)
-                    if (neighbours(i)/=-2*nx) then
-                        neighbours_tmp(j)=neighbours(i)
-                        j=j+1
-                    endif
-                enddo
+                    j=1
+                    do i=1,size(neighbours)
+                        if (neighbours(i)/=-2*nx) then
+                            neighbours_tmp(j)=neighbours(i)
+                            j=j+1
+                        endif
+                    enddo
                 deallocate(neighbours)
                 allocate(neighbours(size(neighbours_tmp)))
                 neighbours=neighbours_tmp
@@ -1883,62 +1281,62 @@ contains
     end subroutine find_regions
 
 
-    subroutine gsw_rho_vectorized(sa,ct,p,rho)
-
-        real(rk),  dimension(:), intent(in) :: sa,ct,p
-        real(rk),  dimension(:), allocatable, intent(out) :: rho
-        real(rk),  dimension(:), allocatable :: sqrtsa, v_hat_denominator, v_hat_numerator
-
-        real (rk), parameter :: v01 =  9.998420897506056d2, v02 =  2.839940833161907d0
-        real (rk), parameter :: v03 = -3.147759265588511d-2, v04 =  1.181805545074306d-3
-        real (rk), parameter :: v05 = -6.698001071123802d0, v06 = -2.986498947203215d-2
-        real (rk), parameter :: v07 =  2.327859407479162d-4, v08 = -3.988822378968490d-2
-        real (rk), parameter :: v09 =  5.095422573880500d-4, v10 = -1.426984671633621d-5
-        real (rk), parameter :: v11 =  1.645039373682922d-7, v12 = -2.233269627352527d-2
-        real (rk), parameter :: v13 = -3.436090079851880d-4, v14 =  3.726050720345733d-6
-        real (rk), parameter :: v15 = -1.806789763745328d-4, v16 =  6.876837219536232d-7
-        real (rk), parameter :: v17 = -3.087032500374211d-7, v18 = -1.988366587925593d-8
-        real (rk), parameter :: v19 = -1.061519070296458d-11, v20 =  1.550932729220080d-10
-        real (rk), parameter :: v21 =  1.0d0, v22 =  2.775927747785646d-3, v23 = -2.349607444135925d-5
-        real (rk), parameter :: v24 =  1.119513357486743d-6, v25 =  6.743689325042773d-10
-        real (rk), parameter :: v26 = -7.521448093615448d-3, v27 = -2.764306979894411d-5
-        real (rk), parameter :: v28 =  1.262937315098546d-7, v29 =  9.527875081696435d-10
-        real (rk), parameter :: v30 = -1.811147201949891d-11, v31 = -3.303308871386421d-5
-        real (rk), parameter :: v32 =  3.801564588876298d-7, v33 = -7.672876869259043d-9
-        real (rk), parameter :: v34 = -4.634182341116144d-11, v35 =  2.681097235569143d-12
-        real (rk), parameter :: v36 =  5.419326551148740d-6, v37 = -2.742185394906099d-5
-        real (rk), parameter :: v38 = -3.212746477974189d-7, v39 =  3.191413910561627d-9
-        real (rk), parameter :: v40 = -1.931012931541776d-12, v41 = -1.105097577149576d-7
-        real (rk), parameter :: v42 =  6.211426728363857d-10, v43 = -1.119011592875110d-10
-        real (rk), parameter :: v44 = -1.941660213148725d-11, v45 = -1.864826425365600d-14
-        real (rk), parameter :: v46 =  1.119522344879478d-14, v47 = -1.200507748551599d-15
-        real (rk), parameter :: v48 =  6.057902487546866d-17
-
-
-        allocate(rho(size(sa)))
-        allocate(sqrtsa(size(sa)))
-        allocate(v_hat_denominator(size(sa)))
-        allocate(v_hat_numerator(size(sa)))
-
-        sqrtsa = sqrt(sa)
-
-        v_hat_denominator = v01 + ct*(v02 + ct*(v03 + v04*ct))  &
-            + sa*(v05 + ct*(v06 + v07*ct) &
-            + sqrtsa*(v08 + ct*(v09 + ct*(v10 + v11*ct)))) &
-            + p*(v12 + ct*(v13 + v14*ct) + sa*(v15 + v16*ct) &
-            + p*(v17 + ct*(v18 + v19*ct) + v20*sa))
-
-        v_hat_numerator = v21 + ct*(v22 + ct*(v23 + ct*(v24 + v25*ct))) &
-            + sa*(v26 + ct*(v27 + ct*(v28 + ct*(v29 + v30*ct))) + v36*sa &
-            + sqrtsa*(v31 + ct*(v32 + ct*(v33 + ct*(v34 + v35*ct)))))  &
-            + p*(v37 + ct*(v38 + ct*(v39 + v40*ct))  &
-            + sa*(v41 + v42*ct) &
-            + p*(v43 + ct*(v44 + v45*ct + v46*sa) &
-            + p*(v47 + v48*ct)))
-
-        rho = v_hat_denominator/v_hat_numerator
-
-
-    end subroutine gsw_rho_vectorized
+!    subroutine epsilon_(sns,ctns,pns,e1t,e2t,ex,ey)
+!        real(rk), dimension(:,:), intent(in) :: sns, ctns, pns, e1t, e2t
+!        real(rk), dimension(:,:), intent(out) :: ex, ey
+!        real(rk), dimension(nx, ny) :: gradx_s, grady_s, gradx_ct, grady_ct
+!        real(rk), dimension(nx,ny) :: alpha, beta, alphax, alphay, betax, betay
+!        real(rk), dimension(nx,ny) :: debug
+!        integer :: i, j, hoitmyxy, setnan
+!        real(rk) :: nan
+!        logical :: zonally_periodic
+!
+!        namelist /user_input/ zonally_periodic
+!
+!        open(1,file='user_input.nml')
+!        read(1,user_input)
+!        close(1)
+!
+!        call ncwrite(pack(sns,.true.),'e1t.nc','e1t',2)
+!        call grad_surf(ctns,e1t,e2t,gradx_ct,grady_ct)
+!        call grad_surf(sns,e1t,e2t,gradx_s,grady_s)
+!        call ncwrite(pack(ctns,.true.),'e1t.nc','e1t',2)
+!        call ncwrite(pack(grady_ct,.true.),'grady_ct.nc','grady_ct',2)
+!        call ncwrite(pack(gradx_s,.true.),'gradx_s.nc','gradx_s',2)
+!
+!        nxy=nx*ny
+!
+!        do j=1,ny
+!            do i=1,nx
+!                alpha(i,j)=gsw_alpha(sns(i,j),ctns(i,j),pns(i,j))
+!            enddo
+!        enddo
+!        do j=1,ny
+!            do i=1,nx
+!                beta(i,j)=gsw_beta(sns(i,j),ctns(i,j),pns(i,j))
+!            enddo
+!        enddo
+!
+!        alphax=0.5d0*(alpha+cshift(alpha,1,1))
+!        alphay=0.5d0*(alpha+cshift(alpha,1,2))
+!        betax=0.5d0*(beta+cshift(beta,1,1))
+!        betay=0.5d0*(beta+cshift(beta,1,2))
+!
+!        setnan=0 ! hide division by 0 at compile time
+!        nan=0d0/setnan
+!
+!        alphay(:,ny)=nan
+!        betay(:,ny)=nan
+!
+!        if (.not.(zonally_periodic)) then
+!            alphax(nx,:)=nan
+!            betax(nx,:)=nan
+!        endif
+!
+!        ex=betax*gradx_s-alphax*gradx_ct
+!        ey=betay*grady_s-alphay*grady_ct
+!
+!
+!    end subroutine epsilon_
 
 end module ansu

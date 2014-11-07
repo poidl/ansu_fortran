@@ -1,0 +1,234 @@
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  ms/call  ms/call  name    
+ 25.00      0.04     0.04       15     2.67     3.87  __ansu_MOD_depth_ntp_simple
+ 18.75      0.07     0.03     7844     0.00     0.00  dscal_
+ 18.75      0.10     0.03     3963     0.01     0.01  dnrm2_
+ 12.50      0.12     0.02   471570     0.00     0.00  gsw_rho_
+ 12.50      0.14     0.02       41     0.49     2.20  __lsqrmodule_MOD_lsqr
+  6.25      0.15     0.01     1973     0.01     0.01  __ansu_MOD_aprod2
+  6.25      0.16     0.01       41     0.24     0.24  __ansu_MOD_lsqr_ay
+  0.00      0.16     0.00     1949     0.00     0.00  __ansu_MOD_aprod1
+  0.00      0.16     0.00       62     0.00     0.00  __definitions_MOD_getnan
+  0.00      0.16     0.00       12     0.00     0.00  __ansu_MOD_find
+  0.00      0.16     0.00        4     0.00     0.00  __ncutils_MOD_ncwrite
+  0.00      0.16     0.00        3     0.00     0.66  __ansu_MOD_delta_tilde_rho
+  0.00      0.16     0.00        3     0.00     3.87  __ansu_MOD_dz_from_drho
+  0.00      0.16     0.00        3     0.00     0.00  __ansu_MOD_find_regions
+  0.00      0.16     0.00        3     0.00    53.34  __ansu_MOD_optimize_surface
+  0.00      0.16     0.00        3     0.00    33.33  __ansu_MOD_solve_lsqr
+  0.00      0.16     0.00        3     0.00    15.48  __ansu_MOD_wetting_simple
+  0.00      0.16     0.00        1     0.00     0.00  __ncutils_MOD_ncread
+
+ %         the percentage of the total running time of the
+time       program used by this function.
+
+cumulative a running sum of the number of seconds accounted
+ seconds   for by this function and those listed above it.
+
+ self      the number of seconds accounted for by this
+seconds    function alone.  This is the major sort for this
+           listing.
+
+calls      the number of times this function was invoked, if
+           this function is profiled, else blank.
+ 
+ self      the average number of milliseconds spent in this
+ms/call    function per call, if this function is profiled,
+	   else blank.
+
+ total     the average number of milliseconds spent in this
+ms/call    function and its descendents per call, if this 
+	   function is profiled, else blank.
+
+name       the name of the function.  This is the minor sort
+           for this listing. The index shows the location of
+	   the function in the gprof listing. If the index is
+	   in parenthesis it shows where it would appear in
+	   the gprof listing if it were to be printed.
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 6.25% of 0.16 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]    100.0    0.00    0.16                 MAIN__ [1]
+                0.00    0.16       3/3           __ansu_MOD_optimize_surface [2]
+                0.00    0.00       4/4           __ncutils_MOD_ncwrite [97]
+                0.00    0.00       1/1           __ncutils_MOD_ncread [99]
+-----------------------------------------------
+                0.00    0.16       3/3           MAIN__ [1]
+[2]    100.0    0.00    0.16       3         __ansu_MOD_optimize_surface [2]
+                0.00    0.10       3/3           __ansu_MOD_solve_lsqr [3]
+                0.00    0.05       3/3           __ansu_MOD_wetting_simple [6]
+                0.00    0.01       3/3           __ansu_MOD_dz_from_drho [10]
+                0.00    0.00       3/3           __ansu_MOD_delta_tilde_rho [13]
+                0.00    0.00       3/3           __ansu_MOD_find_regions [98]
+-----------------------------------------------
+                0.00    0.10       3/3           __ansu_MOD_optimize_surface [2]
+[3]     62.5    0.00    0.10       3         __ansu_MOD_solve_lsqr [3]
+                0.02    0.07      41/41          __lsqrmodule_MOD_lsqr [4]
+                0.01    0.00      41/41          __ansu_MOD_lsqr_ay [12]
+                0.00    0.00       3/62          __definitions_MOD_getnan [95]
+-----------------------------------------------
+                0.02    0.07      41/41          __ansu_MOD_solve_lsqr [3]
+[4]     56.2    0.02    0.07      41         __lsqrmodule_MOD_lsqr [4]
+                0.03    0.00    7844/7844        dscal_ [7]
+                0.03    0.00    3963/3963        dnrm2_ [8]
+                0.01    0.00    1973/1973        __ansu_MOD_aprod2 [11]
+                0.00    0.00    1949/1949        __ansu_MOD_aprod1 [94]
+-----------------------------------------------
+                0.01    0.00       3/15          __ansu_MOD_dz_from_drho [10]
+                0.03    0.01      12/15          __ansu_MOD_wetting_simple [6]
+[5]     36.3    0.04    0.02      15         __ansu_MOD_depth_ntp_simple [5]
+                0.02    0.00  425130/471570      gsw_rho_ [9]
+                0.00    0.00      15/62          __definitions_MOD_getnan [95]
+-----------------------------------------------
+                0.00    0.05       3/3           __ansu_MOD_optimize_surface [2]
+[6]     29.0    0.00    0.05       3         __ansu_MOD_wetting_simple [6]
+                0.03    0.01      12/15          __ansu_MOD_depth_ntp_simple [5]
+                0.00    0.00      12/12          __ansu_MOD_find [96]
+-----------------------------------------------
+                0.03    0.00    7844/7844        __lsqrmodule_MOD_lsqr [4]
+[7]     18.8    0.03    0.00    7844         dscal_ [7]
+-----------------------------------------------
+                0.03    0.00    3963/3963        __lsqrmodule_MOD_lsqr [4]
+[8]     18.8    0.03    0.00    3963         dnrm2_ [8]
+-----------------------------------------------
+                0.00    0.00   46440/471570      __ansu_MOD_delta_tilde_rho [13]
+                0.02    0.00  425130/471570      __ansu_MOD_depth_ntp_simple [5]
+[9]     12.5    0.02    0.00  471570         gsw_rho_ [9]
+-----------------------------------------------
+                0.00    0.01       3/3           __ansu_MOD_optimize_surface [2]
+[10]     7.3    0.00    0.01       3         __ansu_MOD_dz_from_drho [10]
+                0.01    0.00       3/15          __ansu_MOD_depth_ntp_simple [5]
+-----------------------------------------------
+                0.01    0.00    1973/1973        __lsqrmodule_MOD_lsqr [4]
+[11]     6.2    0.01    0.00    1973         __ansu_MOD_aprod2 [11]
+-----------------------------------------------
+                0.01    0.00      41/41          __ansu_MOD_solve_lsqr [3]
+[12]     6.2    0.01    0.00      41         __ansu_MOD_lsqr_ay [12]
+                0.00    0.00      41/62          __definitions_MOD_getnan [95]
+-----------------------------------------------
+                0.00    0.00       3/3           __ansu_MOD_optimize_surface [2]
+[13]     1.2    0.00    0.00       3         __ansu_MOD_delta_tilde_rho [13]
+                0.00    0.00   46440/471570      gsw_rho_ [9]
+                0.00    0.00       3/62          __definitions_MOD_getnan [95]
+-----------------------------------------------
+                0.00    0.00    1949/1949        __lsqrmodule_MOD_lsqr [4]
+[94]     0.0    0.00    0.00    1949         __ansu_MOD_aprod1 [94]
+-----------------------------------------------
+                0.00    0.00       3/62          __ansu_MOD_solve_lsqr [3]
+                0.00    0.00       3/62          __ansu_MOD_delta_tilde_rho [13]
+                0.00    0.00      15/62          __ansu_MOD_depth_ntp_simple [5]
+                0.00    0.00      41/62          __ansu_MOD_lsqr_ay [12]
+[95]     0.0    0.00    0.00      62         __definitions_MOD_getnan [95]
+-----------------------------------------------
+                0.00    0.00      12/12          __ansu_MOD_wetting_simple [6]
+[96]     0.0    0.00    0.00      12         __ansu_MOD_find [96]
+-----------------------------------------------
+                0.00    0.00       4/4           MAIN__ [1]
+[97]     0.0    0.00    0.00       4         __ncutils_MOD_ncwrite [97]
+-----------------------------------------------
+                0.00    0.00       3/3           __ansu_MOD_optimize_surface [2]
+[98]     0.0    0.00    0.00       3         __ansu_MOD_find_regions [98]
+-----------------------------------------------
+                0.00    0.00       1/1           MAIN__ [1]
+[99]     0.0    0.00    0.00       1         __ncutils_MOD_ncread [99]
+-----------------------------------------------
+
+ This table describes the call tree of the program, and was sorted by
+ the total amount of time spent in each function and its children.
+
+ Each entry in this table consists of several lines.  The line with the
+ index number at the left hand margin lists the current function.
+ The lines above it list the functions that called this function,
+ and the lines below it list the functions this one called.
+ This line lists:
+     index	A unique number given to each element of the table.
+		Index numbers are sorted numerically.
+		The index number is printed next to every function name so
+		it is easier to look up where the function in the table.
+
+     % time	This is the percentage of the `total' time that was spent
+		in this function and its children.  Note that due to
+		different viewpoints, functions excluded by options, etc,
+		these numbers will NOT add up to 100%.
+
+     self	This is the total amount of time spent in this function.
+
+     children	This is the total amount of time propagated into this
+		function by its children.
+
+     called	This is the number of times the function was called.
+		If the function called itself recursively, the number
+		only includes non-recursive calls, and is followed by
+		a `+' and the number of recursive calls.
+
+     name	The name of the current function.  The index number is
+		printed after it.  If the function is a member of a
+		cycle, the cycle number is printed between the
+		function's name and the index number.
+
+
+ For the function's parents, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the function into this parent.
+
+     children	This is the amount of time that was propagated from
+		the function's children into this parent.
+
+     called	This is the number of times this parent called the
+		function `/' the total number of times the function
+		was called.  Recursive calls to the function are not
+		included in the number after the `/'.
+
+     name	This is the name of the parent.  The parent's index
+		number is printed after it.  If the parent is a
+		member of a cycle, the cycle number is printed between
+		the name and the index number.
+
+ If the parents of the function cannot be determined, the word
+ `<spontaneous>' is printed in the `name' field, and all the other
+ fields are blank.
+
+ For the function's children, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the child into the function.
+
+     children	This is the amount of time that was propagated from the
+		child's children to the function.
+
+     called	This is the number of times the function called
+		this child `/' the total number of times the child
+		was called.  Recursive calls by the child are not
+		listed in the number after the `/'.
+
+     name	This is the name of the child.  The child's index
+		number is printed after it.  If the child is a
+		member of a cycle, the cycle number is printed
+		between the name and the index number.
+
+ If there are any cycles (circles) in the call graph, there is an
+ entry for the cycle-as-a-whole.  This entry shows who called the
+ cycle (as parents) and the members of the cycle (as children.)
+ The `+' recursive calls entry shows the number of function calls that
+ were internal to the cycle, and the calls entry for each member shows,
+ for that member, how many times it was called from other members of
+ the cycle.
+
+
+Index by function name
+
+  [94] __ansu_MOD_aprod1      [98] __ansu_MOD_find_regions [4] __lsqrmodule_MOD_lsqr
+  [11] __ansu_MOD_aprod2      [12] __ansu_MOD_lsqr_ay     [99] __ncutils_MOD_ncread
+  [13] __ansu_MOD_delta_tilde_rho [2] __ansu_MOD_optimize_surface [97] __ncutils_MOD_ncwrite
+   [5] __ansu_MOD_depth_ntp_simple [3] __ansu_MOD_solve_lsqr [8] dnrm2_
+  [10] __ansu_MOD_dz_from_drho [6] __ansu_MOD_wetting_simple [7] dscal_
+  [96] __ansu_MOD_find        [95] __definitions_MOD_getnan [9] gsw_rho_
