@@ -25,8 +25,7 @@ References:
 	
 - `run.f90`  
    An executable program that illustrates the use of `optimize_surface()`. Additionaly
-   to the GSW Toolbox and LSQR, the NetCDF library must be available to read/write data. The input
-   data set (10 MB) can be downloaded from [http://www.hoitaus.com/drupal/files/data/os_input.nc]
+   to the GSW Toolbox and LSQR, the NetCDF library must be available to read/write data. 
    To build the executable, edit the Makefile to point to the dependencies, and type
 
 	`make run`
