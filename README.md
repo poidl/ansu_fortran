@@ -10,7 +10,7 @@ References:
 - Klocker, A., McDougall, T., Jackett, D., 2009. A new method for forming approximately neutral
    surfaces. Ocean Science 5, 155–172.  
 - Riha, S., McDougall, T. J., Barker, P.M. (unpublished manuscript, 2014): Improvements of an algorithm for 
-   forming approximately neutral surfaces. [http://www.hoitaus.com/drupal/files/publications/paper_syd1_draft.pdf]
+   forming approximately neutral surfaces.
 
 
 
